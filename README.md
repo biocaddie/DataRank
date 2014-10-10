@@ -1,4 +1,4 @@
-biocaddie
+bioCADDIE
 =========
 In this project we're creating a search engine for for biomedical datasets. The idea is to create a recommender system behind the search engine to make searches and recommendations more efficient. Roughly speaking, this priject involves several nontrivial tasks:
  a (offline) recommender system has several component:
