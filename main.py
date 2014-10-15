@@ -1,10 +1,19 @@
 #!/usr/bin/env python
-import sys
-from extrModule import ExtractionFactory as extr
+import sys;
+from extrModule import ExtractionFactory as extr;
 
-def main(argv):
-  extr.extrFeatures("ii","iii");
+def Main(argv):
+  tag_file = argv[1];
+  source_file = argv[2];
+
+  tags = extr.getTags(tag_file);
+  source = extr.getSource(source_file);
+
+  testTag = tags[0];
+  extr.extrFeatures(testTag, source);
   pass;
 
+# Argv_1: Pattern File Name
+# Argv_2: Source File Name
 if __name__ == '__main__':
-  main(sys.argv);
+  Main(sys.argv);
