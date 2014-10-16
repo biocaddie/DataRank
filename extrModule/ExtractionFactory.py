@@ -20,7 +20,7 @@ def extrFeatures(tag, source):
 # Extractor for one group of features for one article.
 DEFAULT_SONS = "default_sons";
 class FeatureExtractor():
-  def __init__(self, tag_string, further_extraction = False):
+  def __init__(self, tag_string):
     self.father, self.sons = re.search('(.*?)\((.*?)\)', tag_string).group(1, 2);
     self.sons = re.sub(' ', '', self.sons);
     self.sons = self.sons.split(",") if self.sons else DEFAULT_SONS;
@@ -32,7 +32,19 @@ class FeatureExtractor():
       features += [extrFeatures(son, content)[0] for son in self.sons];
     return features;
       
+# Extractor for All Articles
+DEFAULT_TAGS = "front(journal-meta, article-meta, kwd-group)\nbody()\nback(ref-list)"
+class BatchParser():
+  def __init__(self, tag_text = DEFAULT_TAGS, unit_name = "article"):
+    self.unit_name = unit_name;
+    self.tags = tag_text;
 
-
-
-
+  def parseBatch(self, source):
+    extractors = [FeatureExtractor(tag_string) for tag_string in self.tags];
+    result_array = [];
+    for content in extrFeatures(self.unit_name, source):
+      temporary_array = [content];
+      for extractor in extractors:
+        temporary_array += extractor.extrFeatures(content);
+      result_array.append(temporary_array);
+    return result_array;

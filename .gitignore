@@ -1,6 +1,6 @@
 #IGNORE DB FILES
 PMC*
+*.db
 
 #IGNORE TEMPORARY FILES
 *.pyc
-
