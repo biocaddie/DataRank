@@ -1,4 +1,7 @@
-#IGNORE DB FILES
+#Ignore Unrelated System Files
+.DS_Store
+
+#Ignore DB Files
 PMC*
 *.db
 
