@@ -10,11 +10,14 @@ def getSource(name_file):
 
 # Return ALL Matched Content as Array of String
 def extrFeatures(tag, source):
+  DEFAULT_VALUE = ['0'];
+  if not source or source == DEFAULT_VALUE:
+    return DEFAULT_VALUE;
   pattern = '<'+tag+'[^>]*?>'+'(.*?)'+'</'+tag+'>';
   matched_patterns = re.findall(pattern, source, re.DOTALL);
-  return matched_patterns;
+  return matched_patterns if matched_patterns else DEFAULT_VALUE;
 
-# Extractor, not Supporting Resursive Extraction, Must be Unique Tag.
+# Extractor for one group of features.
 DEFAULT_SONS = "default_sons";
 class FeatureExtractor():
   def __init__(self, tag_string, further_extraction = False):

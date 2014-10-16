@@ -9,8 +9,9 @@ def Main(argv):
   tags = extr.getTags(tag_file);
   source = extr.getSource(source_file);
 
-  test_tag = tags[0];
+  test_tag = tags[3];
 
+  # print extr.extrFeatures('frot', source);
   article_extractor = extr.FeatureExtractor(test_tag);
   result = article_extractor.extrFeatures(source);
 
