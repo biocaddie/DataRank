@@ -17,7 +17,7 @@ def extrFeatures(tag, source):
   matched_patterns = re.findall(pattern, source, re.DOTALL);
   return matched_patterns if matched_patterns else DEFAULT_VALUE;
 
-# Extractor for one group of features.
+# Extractor for one group of features for one article.
 DEFAULT_SONS = "default_sons";
 class FeatureExtractor():
   def __init__(self, tag_string, further_extraction = False):
@@ -26,13 +26,11 @@ class FeatureExtractor():
     self.sons = self.sons.split(",") if self.sons else DEFAULT_SONS;
 
   def extrFeatures(self, source):
-    results = [];
-    for content in extrFeatures(self.father, source):
-      features = [content];
-      if self.sons != DEFAULT_SONS:
-        features += [extrFeatures(son, content)[0] for son in self.sons];
-      results.append(features);
-    return results;
+    content = extrFeatures(self.father, source)[0];
+    features = [content];
+    if self.sons != DEFAULT_SONS:
+      features += [extrFeatures(son, content)[0] for son in self.sons];
+    return features;
       
 
 

@@ -9,13 +9,19 @@ def Main(argv):
   tags = extr.getTags(tag_file);
   source = extr.getSource(source_file);
 
-  test_tag = tags[3];
+  print tags;
+  # test_tag = tags[3];
+  for test_tag in tags:
+    print(test_tag);
+    # print extr.extrFeatures('frot', source);
+    article_extractor = extr.FeatureExtractor(test_tag);
+    result = article_extractor.extrFeatures(source);
+    print("\n".join([item for item in result]));
 
-  # print extr.extrFeatures('frot', source);
-  article_extractor = extr.FeatureExtractor(test_tag);
-  result = article_extractor.extrFeatures(source);
-
-  print("\n---\n".join(["\n".join(item) for item in result]));
+  # test_tag = tags[0];
+  # article_extractor = extr.FeatureExtractor(test_tag);
+  # result = article_extractor.extrFeatures(source);
+  # print("\n".join([item for item in result]));
 
   pass;
 
