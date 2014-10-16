@@ -9,8 +9,13 @@ def Main(argv):
   tags = extr.getTags(tag_file);
   source = extr.getSource(source_file);
 
-  testTag = tags[0];
-  extr.extrFeatures(testTag, source);
+  test_tag = tags[0];
+
+  article_extractor = extr.FeatureExtractor(test_tag);
+  result = article_extractor.extrFeatures(source);
+
+  print("\n---\n".join(["\n".join(item) for item in result]));
+
   pass;
 
 # Argv_1: Pattern File Name
