@@ -27,7 +27,7 @@ for f in files:
                       
         break
     print 'Num of MeSH ={0}, length of Dic = {1}'.format(i, len(dic))
-with open('/home/airanmehr/mesh2.dict','w') as dicfile:
+with open('/home/airanmehr/mesh2.dic','w') as dicfile:
     for w in dic:
         print >> dicfile,w
 
