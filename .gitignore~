@@ -1,7 +1,6 @@
 #Ignore Unrelated System Files
 .DS_Store
-.project
-.pydevproject
+
 #Ignore DB Files
 PMC*
 *.db
