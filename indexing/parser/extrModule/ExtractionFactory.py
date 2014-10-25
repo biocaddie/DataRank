@@ -17,6 +17,13 @@ def extrFeatures(tag, source):
   matched_patterns = re.findall(pattern, source, re.DOTALL);
   return matched_patterns if matched_patterns else DEFAULT_VALUE;
 
+def extrDBItems(tag_result, source):
+  contents = extrFeatures('article', source);
+  for content in contents:
+    for tag in tag_result.keys():
+      tag_result[tag] += int(len(re.findall(tag, content)) >= 1);
+  return (len(contents), tag_result);
+
 # Extractor for one group of features for one article.
 DEFAULT_SONS = "default_sons";
 class FeatureExtractor():
@@ -48,3 +55,18 @@ class BatchParser():
         temporary_array += extractor.extrFeatures(content);
       result_array.append(temporary_array);
     return result_array;
+
+# Save Results to File
+class ResultFile():
+  def __init__(self, result_name):
+    self.file = open(result_name, 'w+');
+
+  def __enter__(self):
+    return self;
+
+  def __exit__(self, type, value, traceback):
+    self.file.close();
+
+  def saveResult(self, result_array):
+    for (key, value) in result_array.items():
+      self.file.write(str(key)+":"+str(value)+"\n");

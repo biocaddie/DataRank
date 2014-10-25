@@ -3,6 +3,8 @@
 .project
 .pydevproject
 *~
+*.sublime-project
+*.sublime-workspace
 #Ignore DB Files
 PMC*
 *.db
