@@ -30,8 +30,6 @@ class dbConnector():
   def insertDoc(self,docID,abs, terms, table="raw"):
     self.dstcur.execute('INSERT INTO abs_'+table+'(id, abs) VALUES (?, ?)', (docID,abs));
     self.dstcur.execute('INSERT INTO dt_'+table+'(id, terms) VALUES (?, ?)', (docID,str(terms)));
-    print abs
-    print terms
     for termID,num in terms.items():
         self.dstcur.execute("select docs from td_"+table+" where id=?", (termID,))
         docsOfTerm= self.dstcur.fetchone()
