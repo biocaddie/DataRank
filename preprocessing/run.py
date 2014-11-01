@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 import sys;
 import re;
-from preprocessing import DBUtil as lite
-from preprocessing import ExtractAbstract as ext
+import DBUtil as lite
+import ExtractAbstract as ext
 import string
 
 def parse(doc):
