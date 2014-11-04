@@ -74,6 +74,7 @@ def parse_options(options):
             param['dst'] = options[i]
         elif options[i] == '-p':
             i = i + 1
+            print i, options
             param['pipeline'] = options[i]
         elif options[i] == '-D':
             i = i + 1
@@ -168,7 +169,7 @@ options :
 
     if len(sys.argv) < 2:
         exit_with_help()
-    options = sys.argv[1:-1]
+    options = sys.argv[1:]
     try:
         param=parse_options(options)
         with dbConnector(param) as db_conn:
