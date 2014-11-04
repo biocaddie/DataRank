@@ -90,8 +90,6 @@ def parse_options(options):
     import os
     if not os.path.exists(param['src']):
         raise IOError('source database not found')
-    if not os.path.exists(param['dst']):
-        raise IOError('destination database  not found')
     
     
     param['table_name'] = get_table_name(param['pipeline'])
