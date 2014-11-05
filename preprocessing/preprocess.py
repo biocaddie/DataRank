@@ -16,7 +16,7 @@ def parse(doc):
 
 def get_stopwords():
     Dic=[]
-    from nltk.corpus import stopwords
+
     regex = re.compile('[%s]' % re.escape(string.punctuation))
     with open('english.stop') as file:  # http://jmlr.csail.mit.edu/papers/volume5/lewis04a/a11-smart-stop-list/english.stop
         jmlr_stopwords=file.readlines()
@@ -25,7 +25,8 @@ def get_stopwords():
             for w in word:
                 if w not in Dic:
                     Dic.append(w)
-    Dic= list(set(Dic).union(set(stopwords.words('english'))))
+#     from nltk.corpus import stopwords   ## JMLR stopwords is a superset of nltk
+#     Dic= list(set(Dic).union(set(stopwords.words('english'))))
     return Dic
     
 def clean(doc):
@@ -64,7 +65,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'D':0, 'r':0, 'R':'parse-clean'}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'r':0, 'R':'parse-clean'}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -74,11 +75,10 @@ def parse_options(options):
             param['dst'] = options[i]
         elif options[i] == '-p':
             i = i + 1
-            print i, options
             param['pipeline'] = options[i]
         elif options[i] == '-D':
             i = i + 1
-            param['D'] = int(options[i])
+            param['delete_tables'] = int(options[i])
         elif options[i] == '-R':
             i = i + 1
             param['runname'] = options[i]
@@ -93,19 +93,16 @@ def parse_options(options):
     
     
     param['table_name'] = get_table_name(param['pipeline'])
-    print param
+    if 'runname' not in param.keys():
+        param['runname']=param['table_name']
     return param
     
 
 def tf(word, doc):
-    print doc
-#     doc=doc[1]
-#     print type(doc), doc
-    doc=eval(doc)
-    n=sum(doc.values()) # # of words
+    n=float(sum(doc.values())) # # of words
     try:
         f=doc[word]
-    except ValueError:
+    except KeyError:
         f=0
     return f / n
 
@@ -124,16 +121,18 @@ def get_idf(TD,DT):
 def get_tfidf(id, idf, DT, TH):
     doc=eval(DT[id][1])
     doc_tfidf={}
+    print doc
     for k in doc.keys():
-        print 'doc is:', doc
         tfidf_score= tf(k,doc)*idf[k]
+        print k, tfidf_score
         if tfidf_score > TH:
             doc_tfidf[k]=tfidf_score
-    
-    return 
+            print k, tfidf_score,doc_tfidf
+    print doc_tfidf
+    exit(1)
+    return doc_tfidf
      
 def get_corpus_tfidf(db_conn,th):
-    tfidf=[]
     TD=db_conn.getTD() 
     DT=db_conn.getDT()
     idf=get_idf(TD, DT)
@@ -176,7 +175,9 @@ options :
                 db_conn.insert_tfidf(tfidf)
             else:
                 terms_of_doc, dic, j={}, {}, 0
+                db_conn.log( 'Docs Processed\tDic Size')
                 while 1:
+                    Docs, DocTerms, IDs=[],[]
                     j+=1
                     rec=db_conn.getRawROW() # get a row from source database process it and insert it to destination database
                     if rec is None:
@@ -187,10 +188,13 @@ options :
                     if 'clean' in param['pipeline']:
                         id,doc = rec[0], clean(doc)
                     dic, terms_of_doc= insertToDic(dic, doc)
-                    if not id%100:
-                        db_conn.log( id)
-                    db_conn.insertDoc(id, doc ,terms_of_doc)
-                db_conn.insertDic(dic)
+                    if not id%param['batch_size']:
+                        db_conn.log( '{0}\t{1}'.format(id,len(dic)))
+                        db_conn.insertDocs(IDs, Docs ,DocTerms)
+                        db_conn.updateDic(dic)
+                db_conn.log( '{0}\t{1}'.format(id,len(dic)))
+                db_conn.insertDocs(IDs, Docs ,DocTerms)
+                db_conn.updateDic(dic)
     except (IOError,ValueError) as e:
         sys.stderr.write(str(e) + '\n')
         sys.exit(1)

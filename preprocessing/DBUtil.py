@@ -4,14 +4,14 @@ class dbConnector():
   def __init__(self, param):
     if 'clean' in param['pipeline'] or 'parse' in param['pipeline']:
         self.prev_dic_size=0
-        self.run_name=param['run_name'];
+        self.run_name=param['runname'];
         self.table_name=param['table_name'];
         self.src = sqlite3.connect(param['src']);
         self.srccur = self.src.cursor();
         self.srccur.execute('SELECT id,article_meta FROM test_parser');
         self.dst = sqlite3.connect(param['dst']);
         self.dstcur = self.dst.cursor();
-        if self.delete_tables:
+        if param['delete_tables']:
             self.dstcur.execute('drop table if exists abs_'+self.table_name+';');
             self.dstcur.execute('drop table if exists dt_'+self.table_name+';');
             self.dstcur.execute('drop table if exists td_'+self.table_name+';');
@@ -24,7 +24,8 @@ class dbConnector():
     elif 'tfidf' in param['pipeline']:
         self.src = sqlite3.connect(param['src']);
         self.srccur = self.src.cursor();
-        self.srccur.execute('drop table if exists dt_tfidf;');
+        if param['delete_tables']:
+            self.srccur.execute('drop table if exists dt_tfidf;');
         self.srccur.execute('create table dt_tfidf(id int primary key, terms text);');
         
         
@@ -47,26 +48,45 @@ class dbConnector():
       self.srccur.execute('SELECT * FROM dt_clean');
       return self.srccur.fetchall()
       
-  def insertDoc(self,docID,abs, terms):
-    self.dstcur.execute('INSERT INTO abs_'+self.table_name+'(id, abs) VALUES (?, ?)', (docID,abs));
-    self.dstcur.execute('INSERT INTO dt_'+self.table_name+'(id, terms) VALUES (?, ?)', (docID,str(terms)));
+  def insertDoc(self,id,abs, terms):
+    self.dstcur.execute('INSERT INTO abs_'+self.table_name+'(id, abs) VALUES (?, ?)', (id,abs));
+    self.dstcur.execute('INSERT INTO dt_'+self.table_name+'(id, terms) VALUES (?, ?)', (id,str(terms)));
     for termID,num in terms.items():
         self.dstcur.execute("select docs from td_"+self.table_name+" where id=?", (termID,))
         docsOfTerm= self.dstcur.fetchone()
         if docsOfTerm is None: # new term
-            rec =str({docID:num})
+            rec =str({id:num})
             self.dstcur.execute('INSERT INTO td_'+self.table_name+'(id, docs) VALUES (?, ?)', (termID,rec));
         else:
             docsOfTerm=eval(docsOfTerm[0])
-            docsOfTerm[docID]=num
+            docsOfTerm[id]=num
             rec=str(docsOfTerm)
             self.dstcur.execute("UPDATE td_"+self.table_name+" SET docs = ? WHERE id= ? """,(rec,termID))
     self.dst.commit();
-    
+
+  def insertDocs(self,IDs,Docs, DocTerms):
+    for (id, abs, terms) in zip(IDs,Docs, DocTerms):
+        self.dstcur.execute('INSERT INTO abs_'+self.table_name+'(id, abs) VALUES (?, ?)', (id,abs));
+        self.dstcur.execute('INSERT INTO dt_'+self.table_name+'(id, terms) VALUES (?, ?)', (id,str(terms)));
+        for termID,num in terms.items():
+            self.dstcur.execute("select docs from td_"+self.table_name+" where id=?", (termID,))
+            docsOfTerm= self.dstcur.fetchone()
+            if docsOfTerm is None: # new term
+                rec =str({id:num})
+                self.dstcur.execute('INSERT INTO td_'+self.table_name+'(id, docs) VALUES (?, ?)', (termID,rec));
+            else:
+                docsOfTerm=eval(docsOfTerm[0])
+                docsOfTerm[id]=num
+                rec=str(docsOfTerm)
+                self.dstcur.execute("UPDATE td_"+self.table_name+" SET docs = ? WHERE id= ? """,(rec,termID))
+    self.dst.commit();
+  
+  
   def insert_tfidf(self,tfidf):
       n, i=len(tfidf), 0
-      while i<0:  # this is more memory efficient for large lists
-          self.srccur.execute('INSERT INTO dt_tfidf(id, term) VALUES (?, ?)', (i,str(tfidf[i])));
+      print n,i
+      while i<n:  # this is more memory efficient for large lists
+          self.srccur.execute('INSERT INTO dt_tfidf(id, terms) VALUES (?, ?)', (i,str(tfidf[i])));
           i+=1
       
       
@@ -76,7 +96,10 @@ class dbConnector():
       self.dst.commit();
       
   def updateDic(self,dic):
-      for i in range(self.prev_dic_size,len(dic)):
+      self.dstcur.execute("select count(*) from dic_"+self.table_name+";")
+      n= int(self.dstcur.fetchone())
+      print 'size of dictionary saved: ' , n
+      for i in range(n,len(dic)):
           self.dstcur.execute('INSERT INTO dic_'+self.table_name+'(id, term) VALUES (?, ?)', (i,dic[i]));
       self.dst.commit();
   
