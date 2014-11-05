@@ -65,7 +65,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'r':0, 'R':'parse-clean'}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'r':0, 'R':'parse-clean', 'batchsize':200}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -85,7 +85,9 @@ def parse_options(options):
         elif options[i] == '-r':
             i = i + 1
             param['resume'] = int(options[i])
-        
+        elif options[i] == '-b':
+            i = i + 1
+            param['batchsize'] = int(options[i])
         i = i + 1
     import os
     if not os.path.exists(param['src']):
@@ -162,6 +164,7 @@ options :
 -p {parse, parse-clean, tfidf} process pipeline (default parse-clean) 
 -R {runname}  (default process pipeline)
 -th {threshold for tfidf} (default 0)
+-b {batchsize} (default 200)
 """)
 
     if len(sys.argv) < 2:
@@ -177,7 +180,7 @@ options :
                 terms_of_doc, dic, j={}, {}, 0
                 db_conn.log( 'Docs Processed\tDic Size')
                 while 1:
-                    Docs, DocTerms, IDs=[],[]
+                    Docs, DocTerms, IDs=[],[], []
                     j+=1
                     rec=db_conn.getRawROW() # get a row from source database process it and insert it to destination database
                     if rec is None:
@@ -188,7 +191,7 @@ options :
                     if 'clean' in param['pipeline']:
                         id,doc = rec[0], clean(doc)
                     dic, terms_of_doc= insertToDic(dic, doc)
-                    if not id%param['batch_size']:
+                    if not id%param['batchsize']:
                         db_conn.log( '{0}\t{1}'.format(id,len(dic)))
                         db_conn.insertDocs(IDs, Docs ,DocTerms)
                         db_conn.updateDic(dic)
@@ -198,3 +201,5 @@ options :
     except (IOError,ValueError) as e:
         sys.stderr.write(str(e) + '\n')
         sys.exit(1)
+        
+#         -src /home/arya/abstracts.db -p tfidf -D 1
