@@ -65,7 +65,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'r':0, 'R':'parse-clean', 'batchsize':200}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'r':0, 'R':'parse-clean', 'batchsize':250}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -164,7 +164,7 @@ options :
 -p {parse, parse-clean, tfidf} process pipeline (default parse-clean) 
 -R {runname}  (default process pipeline)
 -th {threshold for tfidf} (default 0)
--b {batchsize} (default 200)
+-b {batchsize} (default 250)
 """)
 
     if len(sys.argv) < 2:
