@@ -178,9 +178,9 @@ options :
                 db_conn.insert_tfidf(tfidf)
             else:
                 terms_of_doc, dic, j={}, {}, 0
-                db_conn.log( 'Docs Processed\tDic Size')
+                db_conn.log( '#Docs\t#DicWords')
+                Docs, DocTerms, IDs=[],[], [] # Buffer
                 while 1:
-                    Docs, DocTerms, IDs=[],[], []
                     j+=1
                     rec=db_conn.getRawROW() # get a row from source database process it and insert it to destination database
                     if rec is None:
@@ -191,10 +191,14 @@ options :
                     if 'clean' in param['pipeline']:
                         id,doc = rec[0], clean(doc)
                     dic, terms_of_doc= insertToDic(dic, doc)
+                    IDs.append(id)
+                    Docs.append(doc)
+                    DocTerms.append(terms_of_doc)
                     if not id%param['batchsize']:
                         db_conn.log( '{0}\t{1}'.format(id,len(dic)))
                         db_conn.insertDocs(IDs, Docs ,DocTerms)
                         db_conn.updateDic(dic)
+                        Docs, DocTerms, IDs=[],[], []  # Releasing buffer
                 db_conn.log( '{0}\t{1}'.format(id,len(dic)))
                 db_conn.insertDocs(IDs, Docs ,DocTerms)
                 db_conn.updateDic(dic)
