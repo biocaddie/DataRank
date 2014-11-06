@@ -24,9 +24,10 @@ class dbConnector():
         elif 'tfidf' in param['pipeline']:
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
+            self.table_name='dt_tfidf'+str(param['th']);
             if param['delete_tables']:
-                self.srccur.execute('drop table if exists dt_tfidf;');
-            self.srccur.execute('create table dt_tfidf(id int primary key, terms text);');
+                self.srccur.execute('drop table if exists '+self.table_name+';');
+            self.srccur.execute('create table '+self.table_name+'(id int primary key, terms text);');
           
     def __enter__(self):
       return self;
@@ -81,10 +82,10 @@ class dbConnector():
     
     def insert_tfidf(self,tfidf):
         n, i=len(tfidf), 0
-        print n,i
         while i<n:  # this is more memory efficient for large lists
-            self.srccur.execute('INSERT INTO dt_tfidf(id, terms) VALUES (?, ?)', (i,str(tfidf[i])));
+            self.srccur.execute('INSERT INTO '+self.table_name+'(id, terms) VALUES (?, ?)', (i,str(tfidf[i])));
             i+=1
+        self.src.commit();
         
         
     def insertDic(self,dic):

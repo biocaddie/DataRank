@@ -65,7 +65,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'r':0, 'R':'parse-clean', 'batchsize':250}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'r':0, 'R':'parse-clean', 'batchsize':250, 'th':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -86,6 +86,9 @@ def parse_options(options):
             i = i + 1
             param['resume'] = int(options[i])
         elif options[i] == '-b':
+            i = i + 1
+            param['batchsize'] = int(options[i])
+        elif options[i] == '-th':
             i = i + 1
             param['batchsize'] = int(options[i])
         i = i + 1
@@ -123,15 +126,10 @@ def get_idf(TD,DT):
 def get_tfidf(id, idf, DT, TH):
     doc=eval(DT[id][1])
     doc_tfidf={}
-    print doc
     for k in doc.keys():
         tfidf_score= tf(k,doc)*idf[k]
-        print k, tfidf_score
         if tfidf_score > TH:
             doc_tfidf[k]=tfidf_score
-            print k, tfidf_score,doc_tfidf
-    print doc_tfidf
-    exit(1)
     return doc_tfidf
      
 def get_corpus_tfidf(db_conn,th):
@@ -174,7 +172,7 @@ options :
         param=parse_options(options)
         with dbConnector(param) as db_conn:
             if param['pipeline']=='tfidf':
-                tfidf=get_corpus_tfidf(db_conn,param)
+                tfidf=get_corpus_tfidf(db_conn,param['th'])
                 db_conn.insert_tfidf(tfidf)
             else:
                 terms_of_doc, dic, j={}, {}, 0
