@@ -3,24 +3,31 @@ import sqlite3;
 class dbConnector():
     def __init__(self, param):
         if 'clean' in param['pipeline'] or 'parse' in param['pipeline']:
-            self.prev_dic_size=0
             self.run_name=param['runname'];
             self.table_name=param['table_name'];
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
-            self.srccur.execute('SELECT id,article_meta FROM test_parser');
+            
             self.dst = sqlite3.connect(param['dst']);
             self.dstcur = self.dst.cursor();
-            if param['delete_tables']:
-                self.dstcur.execute('drop table if exists abs_'+self.table_name+';');
-                self.dstcur.execute('drop table if exists dt_'+self.table_name+';');
-                self.dstcur.execute('drop table if exists td_'+self.table_name+';');
-                self.dstcur.execute('drop table if exists dic_'+self.table_name+';');
-            
-            self.dstcur.execute('create table abs_'+self.table_name+'(id int primary key, abs text);');
-            self.dstcur.execute('create table dic_'+self.table_name+'(id int primary key, term text);');
-            self.dstcur.execute('create table td_'+self.table_name+'(id int primary key, docs text);');
-            self.dstcur.execute('create table dt_'+self.table_name+'(id int primary key, terms text);');
+            if param['resume']:
+#                 self.dstcur.execute('SELECT id FROM abs_{0} where id = (select max(id) from abs_{0})'.format(self.table_name));
+                self.dstcur.execute('SELECT count(*) FROM abs_{0}'.format(self.table_name)); #id is from 1..n and records is written sequentially
+                last=self.dstcur.fetchone()
+                print 'resuming from',last, type(last)
+                self.srccur.execute('SELECT id,article_meta FROM test_parser where id >' +last+';');
+            else:
+                self.srccur.execute('SELECT id,article_meta FROM test_parser');
+                if param['delete_tables']:
+                    self.dstcur.execute('drop table if exists abs_'+self.table_name+';');
+                    self.dstcur.execute('drop table if exists dt_'+self.table_name+';');
+                    self.dstcur.execute('drop table if exists td_'+self.table_name+';');
+                    self.dstcur.execute('drop table if exists dic_'+self.table_name+';');
+                
+                self.dstcur.execute('create table abs_'+self.table_name+'(id int primary key, abs text);');
+                self.dstcur.execute('create table dic_'+self.table_name+'(id int primary key, term text);');
+                self.dstcur.execute('create table td_'+self.table_name+'(id int primary key, docs text);');
+                self.dstcur.execute('create table dt_'+self.table_name+'(id int primary key, terms text);');
         elif 'tfidf' in param['pipeline']:
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
@@ -28,7 +35,10 @@ class dbConnector():
             if param['delete_tables']:
                 self.srccur.execute('drop table if exists '+self.table_name+';');
             self.srccur.execute('create table '+self.table_name+'(id int primary key, terms text);');
-          
+    def get_dic(self):
+        self.dstcur.execute('select term from dic_'+self.table_name +';');
+        return self.dst.fetchall()
+        
     def __enter__(self):
       return self;
     

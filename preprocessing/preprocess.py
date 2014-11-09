@@ -65,7 +65,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'r':0, 'R':'parse-clean', 'batchsize':250, 'th':0}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'resume':False, 'R':'parse-clean', 'batchsize':250, 'th':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -84,13 +84,13 @@ def parse_options(options):
             param['runname'] = options[i]
         elif options[i] == '-r':
             i = i + 1
-            param['resume'] = int(options[i])
+            param['resume'] = True
         elif options[i] == '-b':
             i = i + 1
             param['batchsize'] = int(options[i])
         elif options[i] == '-th':
             i = i + 1
-            param['batchsize'] = int(options[i])
+            param['th'] = int(options[i])
         i = i + 1
     import os
     if not os.path.exists(param['src']):
@@ -164,7 +164,7 @@ options :
 -th {threshold for tfidf} (default 0)
 -b {batchsize} (default 250)
 """)
-
+    param={}
     if len(sys.argv) < 2:
         exit_with_help()
     options = sys.argv[1:]
@@ -176,6 +176,8 @@ options :
                 db_conn.insert_tfidf(tfidf)
             else:
                 terms_of_doc, dic, j={}, {}, 0
+                if param['resume']:
+                    dic=eval(db_conn.get_dic())
                 db_conn.log( '#Docs\t#DicWords')
                 Docs, DocTerms, IDs=[],[], [] # Buffer
                 while 1:
@@ -202,6 +204,9 @@ options :
                 db_conn.updateDic(dic)
     except (IOError,ValueError) as e:
         sys.stderr.write(str(e) + '\n')
+        with open(param['runname']+'.error', 'w') as filee:
+            print >> filee, str(e)
+            filee.flush()
         sys.exit(1)
         
 #         -src /home/arya/abstracts.db -p tfidf -D 1
