@@ -65,7 +65,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'resume':False, 'R':'parse-clean', 'batchsize':250, 'th':0}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'resume':False, 'R':'parse-clean', 'batchsize':500, 'th':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -83,7 +83,6 @@ def parse_options(options):
             i = i + 1
             param['runname'] = options[i]
         elif options[i] == '-r':
-            i = i + 1
             param['resume'] = True
         elif options[i] == '-b':
             i = i + 1
@@ -92,6 +91,7 @@ def parse_options(options):
             i = i + 1
             param['th'] = int(options[i])
         i = i + 1
+    print param
     import os
     if not os.path.exists(param['src']):
         raise IOError('source database not found')
@@ -143,6 +143,7 @@ def get_corpus_tfidf(db_conn,th):
     return DT_tfidf
 
 def get_table_name(pipeline):
+    print pipeline
     if 'tfidf' in pipeline:
         return 'tfidf'
     if 'clean' in pipeline:
@@ -162,7 +163,7 @@ options :
 -p {parse, parse-clean, tfidf} process pipeline (default parse-clean) 
 -R {runname}  (default process pipeline)
 -th {threshold for tfidf} (default 0)
--b {batchsize} (default 250)
+-b {batchsize} (default 500)
 """)
     param={}
     if len(sys.argv) < 2:
@@ -178,6 +179,9 @@ options :
                 terms_of_doc, dic, j={}, {}, 0
                 if param['resume']:
                     dic=eval(db_conn.get_dic())
+                print dic.items()[1:10]
+                print len(dic)
+                exit(1)
                 db_conn.log( '#Docs\t#DicWords')
                 Docs, DocTerms, IDs=[],[], [] # Buffer
                 while 1:
@@ -196,12 +200,10 @@ options :
                     DocTerms.append(terms_of_doc)
                     if not id%param['batchsize']:
                         db_conn.log( '{0}\t{1}'.format(id,len(dic)))
-                        db_conn.insertDocs(IDs, Docs ,DocTerms)
-                        db_conn.updateDic(dic)
+                        db_conn.insertDocs_updateDic(IDs, Docs ,DocTerms)
                         Docs, DocTerms, IDs=[],[], []  # Releasing buffer
                 db_conn.log( '{0}\t{1}'.format(id,len(dic)))
-                db_conn.insertDocs(IDs, Docs ,DocTerms)
-                db_conn.updateDic(dic)
+                db_conn.insertDocs_updateDic(IDs, Docs ,DocTerms,dic)
     except (IOError,ValueError) as e:
         sys.stderr.write(str(e) + '\n')
         with open(param['runname']+'.error', 'w') as filee:

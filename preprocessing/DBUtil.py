@@ -3,6 +3,7 @@ import sqlite3;
 class dbConnector():
     def __init__(self, param):
         if 'clean' in param['pipeline'] or 'parse' in param['pipeline']:
+            
             self.run_name=param['runname'];
             self.table_name=param['table_name'];
             self.src = sqlite3.connect(param['src']);
@@ -13,9 +14,9 @@ class dbConnector():
             if param['resume']:
 #                 self.dstcur.execute('SELECT id FROM abs_{0} where id = (select max(id) from abs_{0})'.format(self.table_name));
                 self.dstcur.execute('SELECT count(*) FROM abs_{0}'.format(self.table_name)); #id is from 1..n and records is written sequentially
-                last=self.dstcur.fetchone()
-                print 'resuming from',last, type(last)
-                self.srccur.execute('SELECT id,article_meta FROM test_parser where id >' +last+';');
+                last=self.dstcur.fetchone()[0]
+                print 'Resuming from',last
+                self.srccur.execute('SELECT id,article_meta FROM test_parser where id >' +str(last)+';');
             else:
                 self.srccur.execute('SELECT id,article_meta FROM test_parser');
                 if param['delete_tables']:
@@ -35,15 +36,21 @@ class dbConnector():
             if param['delete_tables']:
                 self.srccur.execute('drop table if exists '+self.table_name+';');
             self.srccur.execute('create table '+self.table_name+'(id int primary key, terms text);');
+
     def get_dic(self):
-        self.dstcur.execute('select term from dic_'+self.table_name +';');
-        return self.dst.fetchall()
+        self.dstcur.execute('select * from dic_'+self.table_name +';');
+        result = self.dstcur.fetchall()
+        dic={}
+        for v,k in result:
+            dic[k]=v
+        return dic
+
         
     def __enter__(self):
-      return self;
+        return self;
     
     def __exit__(self, type, value, traceback):
-      self.src.close();
+        self.src.close();
     
     def getRawROW(self):
         return self.srccur.fetchone()
@@ -56,7 +63,7 @@ class dbConnector():
         self.srccur.execute('SELECT * FROM dt_clean');
         return self.srccur.fetchall()
         
-    def insertDoc(self,id,abs, terms):
+    def insertDoc_updateDic(self,id,abs, terms, dic):
         self.dstcur.execute('INSERT INTO abs_'+self.table_name+'(id, abs) VALUES (?, ?)', (id,abs));
         self.dstcur.execute('INSERT INTO dt_'+self.table_name+'(id, terms) VALUES (?, ?)', (id,str(terms)));
         for termID,num in terms.items():
@@ -70,6 +77,14 @@ class dbConnector():
                 docsOfTerm[id]=num
                 rec=str(docsOfTerm)
                 self.dstcur.execute("UPDATE td_"+self.table_name+" SET docs = ? WHERE id= ? """,(rec,termID))
+        
+        if not len(dic):
+            return
+        self.dstcur.execute("select count(*) from dic_"+self.table_name+";")
+        n=self.dstcur.fetchone()[0]
+        for (term,id) in dic.items():
+            if id>=n:
+                self.dstcur.execute('INSERT INTO dic_'+self.table_name+'(id, term) VALUES (?, ?)', (id,term));
         self.dst.commit();
     
     def insertDocs(self,IDs,Docs, DocTerms):
