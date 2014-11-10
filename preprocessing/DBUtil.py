@@ -87,7 +87,7 @@ class dbConnector():
                 self.dstcur.execute('INSERT INTO dic_'+self.table_name+'(id, term) VALUES (?, ?)', (id,term));
         self.dst.commit();
     
-    def insertDocs(self,IDs,Docs, DocTerms):
+    def insertDocs_updateDic(self,IDs,Docs, DocTerms, dic):
         for (id, abs, terms) in zip(IDs,Docs, DocTerms):
             self.dstcur.execute('INSERT INTO abs_'+self.table_name+'(id, abs) VALUES (?, ?)', (id,abs));
             self.dstcur.execute('INSERT INTO dt_'+self.table_name+'(id, terms) VALUES (?, ?)', (id,str(terms)));
@@ -102,6 +102,14 @@ class dbConnector():
                     docsOfTerm[id]=num
                     rec=str(docsOfTerm)
                     self.dstcur.execute("UPDATE td_"+self.table_name+" SET docs = ? WHERE id= ? """,(rec,termID))
+        
+        if not len(dic):
+            return
+        self.dstcur.execute("select count(*) from dic_"+self.table_name+";")
+        n=self.dstcur.fetchone()[0]
+        for (term,id) in dic.items():
+            if id>=n:
+                self.dstcur.execute('INSERT INTO dic_'+self.table_name+'(id, term) VALUES (?, ?)', (id,term));
         self.dst.commit();
     
     

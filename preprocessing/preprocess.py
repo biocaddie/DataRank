@@ -178,10 +178,7 @@ options :
             else:
                 terms_of_doc, dic, j={}, {}, 0
                 if param['resume']:
-                    dic=eval(db_conn.get_dic())
-                print dic.items()[1:10]
-                print len(dic)
-                exit(1)
+                    dic=db_conn.get_dic()
                 db_conn.log( '#Docs\t#DicWords')
                 Docs, DocTerms, IDs=[],[], [] # Buffer
                 while 1:
