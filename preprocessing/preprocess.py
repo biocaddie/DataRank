@@ -65,7 +65,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'resume':False, 'R':'parse-clean', 'batchsize':500, 'th':0}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'resume':False, 'R':'parse-clean', 'batchsize':1000, 'th':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -91,7 +91,6 @@ def parse_options(options):
             i = i + 1
             param['th'] = int(options[i])
         i = i + 1
-    print param
     import os
     if not os.path.exists(param['src']):
         raise IOError('source database not found')
@@ -143,7 +142,6 @@ def get_corpus_tfidf(db_conn,th):
     return DT_tfidf
 
 def get_table_name(pipeline):
-    print pipeline
     if 'tfidf' in pipeline:
         return 'tfidf'
     if 'clean' in pipeline:
@@ -163,7 +161,7 @@ options :
 -p {parse, parse-clean, tfidf} process pipeline (default parse-clean) 
 -R {runname}  (default process pipeline)
 -th {threshold for tfidf} (default 0)
--b {batchsize} (default 500)
+-b {batchsize} (default 1000)
 """)
     param={}
     if len(sys.argv) < 2:
@@ -197,7 +195,7 @@ options :
                     DocTerms.append(terms_of_doc)
                     if not id%param['batchsize']:
                         db_conn.log( '{0}\t{1}'.format(id,len(dic)))
-                        db_conn.insertDocs_updateDic(IDs, Docs ,DocTerms)
+                        db_conn.insertDocs_updateDic(IDs, Docs ,DocTerms, dic)
                         Docs, DocTerms, IDs=[],[], []  # Releasing buffer
                 db_conn.log( '{0}\t{1}'.format(id,len(dic)))
                 db_conn.insertDocs_updateDic(IDs, Docs ,DocTerms,dic)
