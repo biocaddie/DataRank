@@ -63,30 +63,6 @@ class dbConnector():
         self.srccur.execute('SELECT * FROM dt_clean');
         return self.srccur.fetchall()
         
-    def insertDoc_updateDic(self,id,abs, terms, dic):
-        self.dstcur.execute('INSERT INTO abs_'+self.table_name+'(id, abs) VALUES (?, ?)', (id,abs));
-        self.dstcur.execute('INSERT INTO dt_'+self.table_name+'(id, terms) VALUES (?, ?)', (id,str(terms)));
-        for termID,num in terms.items():
-            self.dstcur.execute("select docs from td_"+self.table_name+" where id=?", (termID,))
-            docsOfTerm= self.dstcur.fetchone()
-            if docsOfTerm is None: # new term
-                rec =str({id:num})
-                self.dstcur.execute('INSERT INTO td_'+self.table_name+'(id, docs) VALUES (?, ?)', (termID,rec));
-            else:
-                docsOfTerm=eval(docsOfTerm[0])
-                docsOfTerm[id]=num
-                rec=str(docsOfTerm)
-                self.dstcur.execute("UPDATE td_"+self.table_name+" SET docs = ? WHERE id= ? """,(rec,termID))
-        
-        if not len(dic):
-            return
-        self.dstcur.execute("select count(*) from dic_"+self.table_name+";")
-        n=self.dstcur.fetchone()[0]
-        for (term,id) in dic.items():
-            if id>=n:
-                self.dstcur.execute('INSERT INTO dic_'+self.table_name+'(id, term) VALUES (?, ?)', (id,term));
-        self.dst.commit();
-    
     def insertDocs_updateDic(self,IDs,Docs, DocsTerms, dic):
         dt={} # Document-Term Matrix for the batch
         for (id, abs, docTerms) in zip(IDs,Docs, DocsTerms):
@@ -101,11 +77,12 @@ class dbConnector():
         for termID,docs in dt.items():
                 self.dstcur.execute("select docs from td_"+self.table_name+" where id=?", (termID,))
                 docsOfTerm= self.dstcur.fetchone()
+
                 if docsOfTerm is None: # new term
                     rec =str(docs)
                     self.dstcur.execute('INSERT INTO td_'+self.table_name+'(id, docs) VALUES (?, ?)', (termID,rec));
                 else:
-                    rec=str(eval(docsOfTerm[0]).update(docs))
+                    rec=str(dict(eval(docsOfTerm[0]).items()+docs.items()))
                     self.dstcur.execute("UPDATE td_"+self.table_name+" SET docs = ? WHERE id= ? """,(rec,termID))
         
         if not len(dic):
@@ -126,10 +103,6 @@ class dbConnector():
         self.src.commit();
         
         
-    def insertDic(self,dic):
-        for i in range(len(dic)):
-            self.dstcur.execute('INSERT INTO dic_'+self.table_name+'(id, term) VALUES (?, ?)', (i,dic[i]));
-        self.dst.commit();
         
     def updateDic(self,dic):
         if not len(dic):
