@@ -3,7 +3,6 @@ import sqlite3;
 class dbConnector():
     def __init__(self, param):
         if 'clean' in param['pipeline'] or 'parse' in param['pipeline']:
-            
             self.run_name=param['runname'];
             self.table_name=param['table_name'];
             self.src = sqlite3.connect(param['src']);
@@ -32,10 +31,11 @@ class dbConnector():
         elif 'tfidf' in param['pipeline']:
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
-            self.table_name='dt_tfidf'+str(param['th']);
+            self.table_name='tfidf'+str(param['th']).replace('.', '');
+            print self.table_name
             if param['delete_tables']:
-                self.srccur.execute('drop table if exists '+self.table_name+';');
-            self.srccur.execute('create table '+self.table_name+'(id int primary key, terms text);');
+                self.srccur.execute('drop table if exists dt_'+self.table_name+';');
+            self.srccur.execute('create table dt_'+self.table_name+'(id int primary key, terms text);');
 
     def get_dic(self):
         self.dstcur.execute('select * from dic_'+self.table_name +';');
@@ -62,6 +62,14 @@ class dbConnector():
     def getDT(self):
         self.srccur.execute('SELECT * FROM dt_clean');
         return self.srccur.fetchall()
+    
+    def getNumDocs(self):
+        self.srccur.execute('SELECT count(*) FROM dt_clean');
+        n1=self.srccur.fetchone()[0]
+        self.srccur.execute('SELECT count(*) FROM abs_clean');
+        n2=self.srccur.fetchone()[0]
+        assert n1==n2
+        return n1
         
     def insertDocs_updateDic(self,IDs,Docs, DocsTerms, dic):
         dt={} # Document-Term Matrix for the batch
@@ -97,8 +105,8 @@ class dbConnector():
     
     def insert_tfidf(self,tfidf):
         n, i=len(tfidf), 0
-        while i<n:  # this is more memory efficient for large lists
-            self.srccur.execute('INSERT INTO '+self.table_name+'(id, terms) VALUES (?, ?)', (i,str(tfidf[i])));
+        while i<n:  
+            self.srccur.execute('INSERT INTO dt_'+self.table_name+'(id, terms) VALUES (?, ?)', (i+1,str(tfidf[i])));
             i+=1
         self.src.commit();
         

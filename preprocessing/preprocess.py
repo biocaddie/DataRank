@@ -65,7 +65,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'resume':False, 'R':'parse-clean', 'batchsize':1000, 'th':0}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'th':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -89,7 +89,7 @@ def parse_options(options):
             param['batchsize'] = int(options[i])
         elif options[i] == '-th':
             i = i + 1
-            param['th'] = int(options[i])
+            param['th'] = float(options[i])
         i = i + 1
     import os
     if not os.path.exists(param['src']):
@@ -110,19 +110,21 @@ def tf(word, doc):
         f=0
     return f / n
 
-def get_idf(TD,DT):
+def get_idf(TD,N):
     from math import log
-    N, w=len(DT), len(TD)
+    w= len(TD)
     print '{0} documents in corpus and {1} terms in the dictionary.'.format(N,w)
     idf=[]
     i=0
     while i<w:
-        
         idf.append(log(N / (1 + len(eval(TD[i][1])))))
         i+=1
     return idf
 
 def get_tfidf(id, idf, DT, TH):
+    """"
+    Computes TFIDF of the Doc with id
+    """
     doc=eval(DT[id][1])
     doc_tfidf={}
     for k in doc.keys():
@@ -132,12 +134,16 @@ def get_tfidf(id, idf, DT, TH):
     return doc_tfidf
      
 def get_corpus_tfidf(db_conn,th):
-    TD=db_conn.getTD() 
-    DT=db_conn.getDT()
-    idf=get_idf(TD, DT)
-    DT_tfidf, i, N=[], 0, len(DT)
-    while i<N:
-        DT_tfidf.append(get_tfidf(i,idf,DT, th))
+    print "Computing IDF..."
+    n=db_conn.getNumDocs()
+    M=db_conn.getTD() 
+    idf=get_idf(M, n)
+    
+    print "Computing TFIDF..."
+    M=db_conn.getDT()
+    DT_tfidf, i=[], 0
+    while i<n:
+        DT_tfidf.append(get_tfidf(i,idf,M, th))
         i+=1
     return DT_tfidf
 
@@ -161,7 +167,7 @@ options :
 -p {parse, parse-clean, tfidf} process pipeline (default parse-clean) 
 -R {runname}  (default process pipeline)
 -th {threshold for tfidf} (default 0)
--b {batchsize} (default 1000)
+-b {batchsize} (default 5000)
 """)
     param={}
     if len(sys.argv) < 2:
@@ -206,4 +212,4 @@ options :
             filee.flush()
         sys.exit(1)
         
-#         -src /home/arya/abstracts.db -p tfidf -D 1
+#         
