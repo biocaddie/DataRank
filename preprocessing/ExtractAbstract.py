@@ -1,7 +1,7 @@
 import re;
-def parse(doc):
+def parse(abs):
     from xml.dom import minidom
-    xmldoc = minidom.parse(doc)
+    xmldoc = minidom.parse(abs)
     itemlist = xmldoc.getElementsByTagName('item') 
     print len(itemlist)
     print itemlist[0].attributes['name'].value
