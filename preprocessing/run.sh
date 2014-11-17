@@ -2,3 +2,6 @@ python preprocess.py -src /home/public/hctest.db -dst /home/public/abstracts.db 
 
 python preprocess.py -src /home/public/hctest.db -dst /home/public/abstracts_clean.db  -D 1 -p parse-clean &
 
+python preprocess.py -src /home/public/abstracts_clean.db -D 1 -p tfidf -th 0.03 &
+
+preprocess.py -src /home/arya/abstracts_clean.db -D 1  -p reduce -th 0.03 &
