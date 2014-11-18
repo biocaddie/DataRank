@@ -45,7 +45,7 @@ def insertToDic(dic,abs):
     Inserts new terms into dictionary and then returns the representation of the document
     """
     words= abs.split()
-    terms={}
+    DT={}
     for w in words:
         w=w.lower()
         try:
@@ -53,11 +53,11 @@ def insertToDic(dic,abs):
         except KeyError:
             idx=len(dic)
             dic[w.lower()]=idx
-        if idx in terms:
-            terms[idx] += 1
+        if idx in DT:
+            DT[idx] += 1
         else:
-            terms[idx] = 1
-    return dic, terms
+            DT[idx] = 1
+    return dic, DT
 
 def insertToReducedDic(dic, dic_old, abs):
     """
@@ -174,6 +174,7 @@ def reduce_to_th(db_conn,param):
     DTs_tfidf=db_conn.getDT('tfidf'+str(param['th']).replace('.', ''))
     DTs_clean=db_conn.getDT('clean')
     Abstracts_clean=db_conn.getAbs('clean')
+    k,ll=0,0
     for (abs_clean, dt_clean, dt_tfidf) in zip(Abstracts_clean, DTs_clean, DTs_tfidf):
         ID,dt_clean, id1,dt_tfidf, id2, abs_clean = dt_clean[0],dt_clean[1], dt_tfidf[0], dt_tfidf[1], abs_clean[0], abs_clean[1] 
         assert ID ==id1 and ID == id2
@@ -188,8 +189,17 @@ def reduce_to_th(db_conn,param):
         IDs.append(ID)
         Abstracts.append(abs_tfidf)
         DTs.append(dt_tfidf)
+        if not len(dt_clean):
+            k+=1
+#             print ID, k 
+        else:
+            ll=max(dt_clean.keys())
+#             print 'Old Dic {1}, New Dic {0}'.format(len(dic),max(dt_clean.keys()))
+        do, dn=set(dic_old.keys()), set(dic.keys())
+        print '{0}\t{1}\t{2}\t{3}'.format(ll , len(dn), len(do.intersection(dn)),0 )
         if not ID%param['batchsize']:
-            db_conn.log( '{0}\t{1}'.format(ID,len(dic)))
+            exit(1)
+            db_conn.log( '{0}\t{1}\t{2}'.format(ID,len(dic)), max(dt_clean.keys())+1)
             db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs, dic)
             Abstracts, DTs, IDs=[],[], []  # Releasing buffer
     db_conn.log( '{0}\t{1}\nDone!'.format(ID,len(dic)))

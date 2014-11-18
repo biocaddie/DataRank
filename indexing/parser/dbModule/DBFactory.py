@@ -4,7 +4,16 @@ class dbConnector():
   def __init__(self, db_name):
     self.conn = sqlite3.connect(db_name);
     self.cur = self.conn.cursor();
-
+    self.cur.execute("""CREATE TABLE if not exists test_parser(
+    id INTEGER PRIMARY KEY   AUTOINCREMENT,
+    raw_article text,
+    raw_front text,
+    journal_meta text,
+    article_meta text,
+    kwd_group text,
+    raw_body text,
+    raw_back text,
+    ref_list text);""")
   def __enter__(self):
     return self;
 
