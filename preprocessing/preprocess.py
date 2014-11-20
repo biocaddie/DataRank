@@ -196,7 +196,21 @@ def reduce_to_th(db_conn,param):
             ll=max(dt_clean.keys())
 #             print 'Old Dic {1}, New Dic {0}'.format(len(dic),max(dt_clean.keys()))
         do, dn=set(dic_old.keys()), set(dic.keys())
-        print '{0}\t{1}\t{2}\t{3}'.format(ll , len(dn), len(do.intersection(dn)),0 )
+        
+        if not ID%100:
+            print '{4}\t{0}\t{1}\t{2}\t{3}'.format( ll , len(dn), len(do.intersection(dn))+1,ll - len(do.intersection(dn)) -1, ID)
+            v= sorted(dic.keys())
+            z=[]
+            j=0
+            for j in range(ll):
+                z.append(dic_old_inverse[j]) 
+            v=sorted(list(set(v)-set(z)))
+            print len(v)
+            for w in v:
+                print w
+            
+            
+            exit(1)
         if not ID%param['batchsize']:
             exit(1)
             db_conn.log( '{0}\t{1}\t{2}'.format(ID,len(dic)), max(dt_clean.keys())+1)
@@ -266,6 +280,7 @@ options :
                         db_conn.log( '{0}\t{1}'.format(ID,len(dic)))
                         db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs, dic)
                         Abstracts, DTs, IDs=[],[], []  # Releasing buffer
+                        exit(1)
                 db_conn.log( '{0}\t{1}\nDone!'.format(ID,len(dic)))
                 db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
     except (IOError,ValueError) as e:
