@@ -8,7 +8,13 @@ def parse(abs):
     """
     Extracts abstract and ignores the tags extra white spaces within abstracts.
     """
-    abs=abs[abs.find('<abstract>'): abs.find('</abstract>')]
+    try:
+        s=re.search(r'<abstract[^>]*>', abs).end()
+        e=re.search(r'<[^>]*/abstract>', abs).start()
+    except AttributeError:
+        print 'Warning'
+        return ''
+    abs=abs[s:e]
     abs= re.sub('<[^>]*>', '', abs[abs.find('<abstract>'): abs.find('</abstract>')])
     abs= re.sub('[\n\t]', '', abs)
     abs= re.sub('\s+', ' ', abs).encode('ascii', errors='backslashreplace').lower()
