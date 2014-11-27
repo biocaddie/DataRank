@@ -4,7 +4,6 @@ class dbConnector():
     def __init__(self, param):
         self.run_name=param['runname'];
         if 'clean' in param['pipeline'] or 'parse' in param['pipeline']:
-            self.table_name=param['table_name'];
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
             
@@ -24,7 +23,6 @@ class dbConnector():
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
             self.dstcur, self.dst = self.srccur, self.src
-            self.table_name='tfidf'+str(param['th']).replace('.', '');
             if param['delete_tables']:
                 self.drop_tables('all')
             self.create_tables('all')
@@ -32,7 +30,6 @@ class dbConnector():
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
             self.dstcur, self.dst = self.srccur, self.src
-            self.table_name='reduced'+str(param['th']).replace('.', '');
             if param['delete_tables']:
                 self.drop_tables('all')
             self.create_tables('all')
@@ -64,9 +61,7 @@ class dbConnector():
     def getRawROW(self):
         return self.srccur.fetchone()
     
-    def get_dic(self, table_name=None):
-        if table_name is None:
-            table_name=self.table_name
+    def get_dic(self):
         self.dstcur.execute('select * from dic;');
         result = self.dstcur.fetchall()
         dic={}
@@ -75,21 +70,15 @@ class dbConnector():
         return dic
     
     
-    def getAbs(self,table_name=None):
-        if table_name==None:
-            table_name=self.table_name
+    def getAbs(self):
         self.srccur.execute('SELECT * FROM abs;');
         return self.srccur.fetchall()
     
-    def getTD(self,table_name=None):
-        if table_name==None:
-            table_name=self.table_name
+    def getTD(self):
         self.srccur.execute('SELECT * FROM td;');
         return self.srccur.fetchall()
     
-    def getDT(self,table_name=None):
-        if table_name==None:
-            table_name=self.table_name
+    def getDT(self):
         self.srccur.execute('SELECT * FROM dt;');
         return self.srccur.fetchall()
     

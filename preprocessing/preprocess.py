@@ -12,10 +12,9 @@ def parse(abs):
         s=re.search(r'<abstract[^>]*>', abs).end()
         e=re.search(r'<[^>]*/abstract>', abs).start()
     except AttributeError:
-        print 'Warning'
         return ''
     abs=abs[s:e]
-    abs= re.sub('<[^>]*>', '', abs[abs.find('<abstract>'): abs.find('</abstract>')])
+    abs= re.sub('<[^>]*>', '', abs)
     abs= re.sub('[\n\t]', '', abs)
     abs= re.sub('\s+', ' ', abs).encode('ascii', errors='backslashreplace').lower()
     return abs
@@ -36,14 +35,13 @@ def get_stopwords():
     return Dic
     
 def clean(abs):
-    regex = re.compile('[%s\d]' % re.escape(string.punctuation))
+    regex = re.compile('[%s\d]' % re.escape(string.punctuation)) # to keep numbers just remove \d
     stopwords=get_stopwords()
     abs=" ".join(w for w in abs.split() if not w in stopwords)
     abs=regex.sub(' ', abs)
-    abs= re.sub('\s+', ' ', abs)
-    from stemming.porter2 import stem
-    abs = " ".join([stem(word) for word in abs.split(" ")])
-
+    abs= re.sub('\s+', ' ', abs) #remove white spaces
+#     from stemming.porter2 import stem
+#     abs = " ".join([stem(word) for word in abs.split(" ")])
     return abs
 
 def insertToDic(dic,abs):
@@ -121,9 +119,8 @@ def parse_options(options):
         raise IOError('source database not found')
     
     
-    param['table_name'] = get_table_name(param['pipeline'])
     if 'runname' not in param.keys():
-        param['runname']=param['table_name']
+        param['runname']=param['pipeline']
     return param
     
 
@@ -226,16 +223,6 @@ def reduce_to_th(db_conn,param):
     db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
     return
 
-def get_table_name(pipeline):
-    if 'reduce' in pipeline:
-        return 'reduce'
-    if 'tfidf' in pipeline:
-        return 'tfidf'
-    if 'clean' in pipeline:
-        return 'clean'
-    if 'parse' in pipeline:
-        return 'raw'
-    
 if __name__ == '__main__':
     def exit_with_help():
         print("""\
@@ -274,6 +261,7 @@ options :
                     if rec is None:
                         break
                     ID,abs = rec[0], rec[1]
+                    
                     if 'parse' in param['pipeline']:
                         ID,abs = rec[0], parse(abs)
                     if 'clean' in param['pipeline']:
@@ -286,7 +274,6 @@ options :
                         db_conn.log( '{0}\t{1}'.format(ID,len(dic)))
                         db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs, dic)
                         Abstracts, DTs, IDs=[],[], []  # Releasing buffer
-                        exit(1)
                 db_conn.log( '{0}\t{1}\nDone!'.format(ID,len(dic)))
                 db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
     except (IOError,ValueError) as e:
