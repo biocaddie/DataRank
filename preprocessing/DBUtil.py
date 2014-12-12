@@ -24,15 +24,19 @@ class dbConnector():
             self.srccur = self.src.cursor();
             self.dstcur, self.dst = self.srccur, self.src
             if param['delete_tables']:
-                self.drop_tables('all')
-            self.create_tables('all')
+                self.drop_tables('tfidf')
+            self.create_tables('tfidf')
         elif 'reduce' in param['pipeline']:
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
-            self.dstcur, self.dst = self.srccur, self.src
+            self.dst = sqlite3.connect(param['dst']);
+            self.dstcur = self.dst.cursor();
             if param['delete_tables']:
                 self.drop_tables('all')
             self.create_tables('all')
+        elif 'convertlda' in param['pipeline']:
+            self.src = sqlite3.connect(param['src']);
+            self.srccur = self.src.cursor();
     
     def drop_tables(self,tables):
         if tables=='all':
@@ -41,7 +45,7 @@ class dbConnector():
             self.dstcur.execute('drop table if exists td;');
             self.dstcur.execute('drop table if exists dic;');
         elif tables=='tfidf':
-            self.dstcur.execute('drop table if exists dt;');
+            self.dstcur.execute('drop table if exists tfidf;');
 
     def create_tables(self,tables):
         if tables=='all':
@@ -50,7 +54,7 @@ class dbConnector():
             self.dstcur.execute('create table td(ID int primary key, docs text);');
             self.dstcur.execute('create table dt(ID int primary key, terms text);');
         elif tables=='tfidf':
-            self.dstcur.execute('create table dt(ID int primary key, terms text);');
+            self.dstcur.execute('create table tfidf(ID int primary key, terms text);');
     
     def __enter__(self):
         return self;
@@ -61,9 +65,13 @@ class dbConnector():
     def getRawROW(self):
         return self.srccur.fetchone()
     
-    def get_dic(self):
-        self.dstcur.execute('select * from dic;');
-        result = self.dstcur.fetchall()
+    def get_dic(self,src=True):
+        if src:
+            self.srccur.execute('select * from dic;');
+            result = self.srccur.fetchall()
+        else:
+            self.dstcur.execute('select * from dic;');
+            result = self.dstcur.fetchall()
         dic={}
         for v,k in result:
             dic[k]=v
@@ -80,6 +88,10 @@ class dbConnector():
     
     def getDT(self):
         self.srccur.execute('SELECT * FROM dt;');
+        return self.srccur.fetchall()
+    
+    def getTFIDF(self):
+        self.srccur.execute('SELECT * FROM tfidf;');
         return self.srccur.fetchall()
     
     def getNumDocs(self):
@@ -125,7 +137,7 @@ class dbConnector():
     def insert_tfidf(self,tfidf):
         n, i=len(tfidf), 0
         while i<n:  
-            self.srccur.execute('INSERT INTO dt(ID, terms) VALUES (?, ?)', (i+1,str(tfidf[i])));
+            self.srccur.execute('INSERT INTO tfidf(ID, terms) VALUES (?, ?)', (i+1,str(tfidf[i])));
             i+=1
         self.src.commit();
         

@@ -143,7 +143,7 @@ def get_idf(TD,N):
         i+=1
     return idf
 
-def get_tfidf(ID, idf, DTs, TH):
+def get_tfidf(ID, idf, DTs):
     """"
     Computes TFIDF of the Doc with ID
     """
@@ -151,11 +151,11 @@ def get_tfidf(ID, idf, DTs, TH):
     doc_tfidf={}
     for k in abs.keys():
         tfidf_score= tf(k,abs)*idf[k]
-        if tfidf_score > TH:
-            doc_tfidf[k]=tfidf_score
+#         if tfidf_score > TH:
+        doc_tfidf[k]=tfidf_score
     return doc_tfidf
      
-def get_corpus_tfidf(db_conn,th):
+def get_corpus_tfidf(db_conn):
     print "Computing IDF..."
     n=db_conn.getNumDocs()
     M=db_conn.getTD() 
@@ -165,63 +165,92 @@ def get_corpus_tfidf(db_conn,th):
     M=db_conn.getDT()
     DT_tfidf, i=[], 0
     while i<n:
-        DT_tfidf.append(get_tfidf(i,idf,M, th))
+        DT_tfidf.append(get_tfidf(i,idf,M))
         i+=1
     return DT_tfidf
+def reduce_abs(abs_old, dt_old, tfidf, dic_old_inverse,th):
+    for k,v in tfidf.items():
+        if v<th:
+            del tfidf[k]
+    IDsToRemove=list(set(dt_old.keys()) - set(tfidf.keys()))
+    wordsToRemove =[dic_old_inverse[termID] for termID in IDsToRemove]
+    abs=abs_old
+    for t in wordsToRemove:
+        abs=abs.replace(' '+t+' ',' ')
+    abs=abs.replace('  ',' ').strip()
+    return abs
 
 def reduce_to_th(db_conn,param):
     dic={}
-    dic_old=db_conn.get_dic('clean')
+    dic_old=db_conn.get_dic()
     dic_old_inverse = {value: key for (key, value) in dic_old.items()}
     Abstracts, DTs, IDs=[],[], [] # Buffer
-    DTs_tfidf=db_conn.getDT('tfidf'+str(param['th']).replace('.', ''))
-    DTs_clean=db_conn.getDT('clean')
-    Abstracts_clean=db_conn.getAbs('clean')
+    TFIDFs=db_conn.getTFIDF()
+    DTs_old=db_conn.getDT()
+    Abstracts_old=db_conn.getAbs()
     k,ll=0,0
-    for (abs_clean, dt_clean, dt_tfidf) in zip(Abstracts_clean, DTs_clean, DTs_tfidf):
-        ID,dt_clean, id1,dt_tfidf, id2, abs_clean = dt_clean[0],dt_clean[1], dt_tfidf[0], dt_tfidf[1], abs_clean[0], abs_clean[1] 
+    for (abs_old, dt_old, tfidf) in zip(Abstracts_old, DTs_old, TFIDFs):
+        ID,dt_old, id1,tfidf, id2, abs_old = dt_old[0],eval(dt_old[1]), tfidf[0], eval(tfidf[1]), abs_old[0], abs_old[1] 
         assert ID ==id1 and ID == id2
-        dt_clean, dt_tfidf=eval(dt_clean),eval(dt_tfidf)
-        removeIDs=list(set(dt_clean.keys()) - set(dt_tfidf.keys()))
-        remove =[dic_old_inverse[termID] for termID in removeIDs]
-        abs_tfidf=abs_clean
-        for t in remove:
-            abs_tfidf=abs_tfidf.replace(t,'')
-        abs_tfidf=abs_tfidf.replace('  ',' ').strip()
-        dic, dt_tfidf= insertToDic(dic, abs_tfidf)
+        abs= reduce_abs(abs_old, dt_old, tfidf, dic_old_inverse, param['th'])
+        dic, dt= insertToDic(dic, abs)
         IDs.append(ID)
-        Abstracts.append(abs_tfidf)
-        DTs.append(dt_tfidf)
-        if not len(dt_clean):
-            k+=1
-#             print ID, k 
-        else:
-            ll=max(dt_clean.keys())
-#             print 'Old Dic {1}, New Dic {0}'.format(len(dic),max(dt_clean.keys()))
-        do, dn=set(dic_old.keys()), set(dic.keys())
+        Abstracts.append(abs)
+        DTs.append(dt)
         
-        if not ID%100:
-            print '{4}\t{0}\t{1}\t{2}\t{3}'.format( ll , len(dn), len(do.intersection(dn))+1,ll - len(do.intersection(dn)) -1, ID)
-            v= sorted(dic.keys())
-            z=[]
-            j=0
-            for j in range(ll):
-                z.append(dic_old_inverse[j]) 
-            v=sorted(list(set(v)-set(z)))
-            print len(v)
-            for w in v:
-                print w
-            
-            
-            exit(1)
+#         if not len(dt_old):
+#             k+=1
+# #             print ID, k 
+#         else:
+#             ll=max(dt_old.keys())
+# #             print 'Old Dic {1}, New Dic {0}'.format(len(dic),max(dt_old.keys()))
+#         do, dn=set(dic_old.keys()), set(dic.keys())
+#         
+#         if not ID%100:
+#             print '{4}\t{0}\t{1}\t{2}\t{3}'.format( ll , len(dn), len(do.intersection(dn))+1,ll - len(do.intersection(dn)) -1, ID)
+#             v= sorted(dic.keys())
+#             z=[]
+#             j=0
+#             for j in range(ll):
+#                 z.append(dic_old_inverse[j]) 
+#             v=sorted(list(set(v)-set(z)))
+#             print len(v)
+#             for w in v:
+#                 print w
+#             
+#             
+#             exit(1)
         if not ID%param['batchsize']:
-            exit(1)
-            db_conn.log( '{0}\t{1}\t{2}'.format(ID,len(dic)), max(dt_clean.keys())+1)
+#             exit(1)
+            db_conn.log( '{0}\t{1}\t{2}'.format(ID, len(dic), 1))
             db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs, dic)
             Abstracts, DTs, IDs=[],[], []  # Releasing buffer
     db_conn.log( '{0}\t{1}\nDone!'.format(ID,len(dic)))
     db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
     return
+
+def writeBoW(DTs, path):
+    with open(path+'.dat','w') as file:
+        for id, dt in DTs:
+            n=len(eval(dt))
+            if n<2:
+                continue
+            dt= str(dt)[1:-1].replace(' ','')
+            dt=dt.replace(',', ' ')
+            print >> file,n,dt
+
+def writeDic(dic, path):
+    import operator
+    dic= sorted(dic.items(), key=operator.itemgetter(1))
+    with open(path+'.dic','w') as file:
+        for w in dic:
+            print >> file,w[0]   
+
+def write_to_lda_format(db_conn,param):
+    DTs=db_conn.getDT()
+    dic=db_conn.get_dic()
+    writeBoW(DTs, param['src'].replace('.db','.dat'))
+    writeDic(dic, param['src'].replace('.db','.dic'))
 
 if __name__ == '__main__':
     def exit_with_help():
@@ -232,7 +261,7 @@ options :
 -dst {destination database path} (default /home/public/abstracts.db)
 -D {0,1}: deletes tables if they exit (default 0)
 -r {0,1} : resume from the last record inserted (default 0) 
--p {parse, parse-clean, tfidf} process pipeline (default parse-clean) 
+-p {parse, parse-clean, reduce} process pipeline (default parse-clean) 
 -R {runname}  (default process pipeline)
 -th {threshold for tfidf} (default 0)
 -b {batchsize} (default 5000)
@@ -245,10 +274,12 @@ options :
         param=parse_options(options)
         with dbConnector(param) as db_conn:
             if param['pipeline']=='tfidf':
-                tfidf=get_corpus_tfidf(db_conn,param['th'])
+                tfidf=get_corpus_tfidf(db_conn)
                 db_conn.insert_tfidf(tfidf)
             elif param['pipeline']=='reduce':
                 reduce_to_th(db_conn,param)
+            elif param['pipeline']=='convertlda':
+                write_to_lda_format(db_conn,param)
             else:
                 DT, dic, j={}, {}, 0
                 if param['resume']:
@@ -274,6 +305,7 @@ options :
                         db_conn.log( '{0}\t{1}'.format(ID,len(dic)))
                         db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs, dic)
                         Abstracts, DTs, IDs=[],[], []  # Releasing buffer
+                        exit(1)
                 db_conn.log( '{0}\t{1}\nDone!'.format(ID,len(dic)))
                 db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
     except (IOError,ValueError) as e:
