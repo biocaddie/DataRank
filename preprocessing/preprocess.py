@@ -185,9 +185,13 @@ def reduce_to_th(db_conn,param):
     dic_old=db_conn.get_dic()
     dic_old_inverse = {value: key for (key, value) in dic_old.items()}
     Abstracts, DTs, IDs=[],[], [] # Buffer
+    db_conn.log( 'Reading TFIDF')
     TFIDFs=db_conn.getTFIDF()
+    db_conn.log( 'Reading DT')
     DTs_old=db_conn.getDT()
+    db_conn.log( 'Reading Abs')
     Abstracts_old=db_conn.getAbs()
+    db_conn.log( 'Processing')
     k,ll=0,0
     for (abs_old, dt_old, tfidf) in zip(Abstracts_old, DTs_old, TFIDFs):
         ID,dt_old, id1,tfidf, id2, abs_old = dt_old[0],eval(dt_old[1]), tfidf[0], eval(tfidf[1]), abs_old[0], abs_old[1] 
@@ -198,28 +202,6 @@ def reduce_to_th(db_conn,param):
         Abstracts.append(abs)
         DTs.append(dt)
         
-#         if not len(dt_old):
-#             k+=1
-# #             print ID, k 
-#         else:
-#             ll=max(dt_old.keys())
-# #             print 'Old Dic {1}, New Dic {0}'.format(len(dic),max(dt_old.keys()))
-#         do, dn=set(dic_old.keys()), set(dic.keys())
-#         
-#         if not ID%100:
-#             print '{4}\t{0}\t{1}\t{2}\t{3}'.format( ll , len(dn), len(do.intersection(dn))+1,ll - len(do.intersection(dn)) -1, ID)
-#             v= sorted(dic.keys())
-#             z=[]
-#             j=0
-#             for j in range(ll):
-#                 z.append(dic_old_inverse[j]) 
-#             v=sorted(list(set(v)-set(z)))
-#             print len(v)
-#             for w in v:
-#                 print w
-#             
-#             
-#             exit(1)
         if not ID%param['batchsize']:
 #             exit(1)
             db_conn.log( '{0}\t{1}\t{2}'.format(ID, len(dic), 1))
