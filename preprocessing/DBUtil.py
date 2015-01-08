@@ -3,7 +3,17 @@ import sqlite3;
 class dbConnector():
     def __init__(self, param):
         self.run_name=param['runname'];
-        if 'clean' in param['pipeline'] or 'parse' in param['pipeline']:
+        if 'clean' in param['pipeline']:
+            self.src = sqlite3.connect(param['src']);
+            self.srccur = self.src.cursor();
+            
+            self.dst = sqlite3.connect(param['dst']);
+            self.dstcur = self.dst.cursor();
+            self.srccur.execute('select abs from abs where length(abs)>5');
+            if param['delete_tables']:
+                self.drop_tables('all')
+            self.create_tables('all') 
+        if 'parse' in param['pipeline']:
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
             
@@ -64,6 +74,9 @@ class dbConnector():
     
     def getRawROW(self):
         return self.srccur.fetchone()
+    
+    def getAll(self):
+        return self.srccur.fetchall()
     
     def get_dic(self,src=True):
         if src:

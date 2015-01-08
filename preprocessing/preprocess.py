@@ -1,8 +1,12 @@
 #!/usr/bin/env python
+from sklearn.feature_extraction.text import CountVectorizer
+from stemming.porter2 import stem
 import sys;
 import re;
 from DBUtil import *
+import pylab as P
 import string
+from numpy import array, ones, nonzero
 
 def parse(abs):
     """
@@ -34,15 +38,110 @@ def get_stopwords():
 #     Dic= list(set(Dic).union(set(stopwords.words('english'))))
     return Dic
     
-def clean(abs):
+def clean_old(abs):
     regex = re.compile('[%s\d]' % re.escape(string.punctuation)) # to keep numbers just remove \d
     stopwords=get_stopwords()
     abs=" ".join(w for w in abs.split() if not w in stopwords)
     abs=regex.sub(' ', abs)
     abs= re.sub('\s+', ' ', abs) #remove white spaces
-#     from stemming.porter2 import stem
 #     abs = " ".join([stem(word) for word in abs.split(" ")])
     return abs
+
+import Stemmer #PyStemmer
+english_stemmer = Stemmer.Stemmer('en')
+class StemmedCountVectorizer(CountVectorizer):
+    def build_analyzer(self):
+         analyzer = super(CountVectorizer, self).build_analyzer()
+         return lambda doc: english_stemmer.stemWords((analyzer(doc)))
+
+
+def tfidf_th(X,th):
+    print 'computing tfidf ...'
+    from sklearn.feature_extraction.text import TfidfTransformer
+    transformer = TfidfTransformer()
+    tfidf = transformer.fit_transform(X)
+
+    nz= tfidf.nonzero()
+    print 'cleaning...'
+    for i,j in zip(nz[0],nz[1]):
+        if tfidf[i,j]<th:
+            X[i,j]=0
+    X.eliminate_zeros()
+    return X
+
+def inverse_index(IDX,idx):
+    inv_idx= -ones(len(IDX))
+    for i in range(len(idx)):
+        inv_idx[idx[i]]=i
+    return inv_idx
+
+def remove_low_freq_words(X,th=3):
+    print 'Removing low freq words... (' ,
+    nz= X.nonzero()
+    import collections
+    word_freq=  map(lambda x: x[1], collections.Counter(nz[1]).items())
+    to_remove=[]
+    for i in range(len(word_freq)):
+        if word_freq[i]<=th:
+            to_remove.append(i)
+    to_remove=set(to_remove)
+    print len(to_remove), 'will be removed )'
+    for i,j in zip(nz[0],nz[1]):
+        if j in to_remove:
+            X[i,j]=0
+    X.eliminate_zeros()
+    return X
+    
+def clean(corpus, th =0.0, do_stemming=True):
+    th=0.01
+#     do_stemming=False
+    if do_stemming:
+        vectorizer = StemmedCountVectorizer(min_df=1,stop_words='english', analyzer='word', ngram_range=(1,1),token_pattern=r"\b[a-z]\w+\b")
+    else:
+        vectorizer = CountVectorizer(min_df=1,stop_words='english', analyzer='word', ngram_range=(1,1),token_pattern=r"\b[a-z]\w+\b")
+        
+    print 'Creating BoW...'
+    X=vectorizer.fit_transform(corpus)
+    dic=array(vectorizer.get_feature_names())
+#     writeDic(dic,path='/home/arya/storage/pmc.full')
+    IDX=range(len(dic))
+    corpus_stats(X)
+    
+    if th>0:
+        X=tfidf_th(X,th)
+        idx=corpus_stats(X)
+    
+    X=remove_low_freq_words(X,th=20)
+    idx=corpus_stats(X)
+    
+    inv_idx = inverse_index(IDX, idx)
+    removed=list(set(range(len(dic)))-set(idx))
+    removed = dic[removed]
+    path='/home/arya/storage/pmc'
+    writeBoW(X, inv_idx,path)
+    writeDic(dic[idx],path)
+     
+
+def corpus_stats(X, do_plot=False):
+    P.ion()
+    nz= X.nonzero()
+    import collections
+    doc_length= map(lambda x: x[1], collections.Counter(nz[0]).items())
+    word_freq=  map(lambda x: x[1], collections.Counter(nz[1]).items())
+    doc_id= map(lambda x: x[0], collections.Counter(nz[0]).items())
+    word_id=  map(lambda x: x[0], collections.Counter(nz[1]).items())
+    print 'There are {} docs with {} words and dic size of {} '.format(len(doc_id),X.nnz, len(word_id))
+    if do_plot:
+        P.figure()
+        P.subplot(1,2,1)
+        n, bins, patches = P.hist(doc_length, max(doc_length),  histtype='stepfilled')
+        P.title('Document lenghths')
+        P.subplot(1,2,2)
+        P.title('Word Frequency')
+        n, bins, patches = P.hist(word_freq, max(word_freq),  histtype='stepfilled')
+        P.show()
+    return word_id
+
 
 def insertToDic(dic,abs):
     """
@@ -88,7 +187,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'th':0}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':1, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'th':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -115,6 +214,9 @@ def parse_options(options):
             param['th'] = float(options[i])
         i = i + 1
     import os
+    if param['pipeline']=='reduce':
+        param['dst']=param['src'].replace('.db', '{}.db'.format(str(param['th']).replace('.', '')))
+	param['runname'] = param['pipeline']+ str(param['th']).replace('.', '')
     if not os.path.exists(param['src']):
         raise IOError('source database not found')
     
@@ -135,7 +237,7 @@ def tf(word, abs):
 def get_idf(TD,N):
     from math import log
     w= len(TD)
-    print '{0} documents in corpus and {1} terms in the dictionary.'.format(N,w)
+    print '{0} documents in corpus and {1} terms in the dictionary.'.format(N,w) 
     idf=[]
     i=0
     while i<w:
@@ -168,6 +270,7 @@ def get_corpus_tfidf(db_conn):
         DT_tfidf.append(get_tfidf(i,idf,M))
         i+=1
     return DT_tfidf
+
 def reduce_abs(abs_old, dt_old, tfidf, dic_old_inverse,th):
     for k,v in tfidf.items():
         if v<th:
@@ -211,7 +314,7 @@ def reduce_to_th(db_conn,param):
     db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
     return
 
-def writeBoW(DTs, path):
+def writeBoW_old(DTs, path='/home/arya/pmc'):
     with open(path+'.dat','w') as file:
         for id, dt in DTs:
             n=len(eval(dt))
@@ -221,18 +324,66 @@ def writeBoW(DTs, path):
             dt=dt.replace(',', ' ')
             print >> file,n,dt
 
-def writeDic(dic, path):
+def writeDic_old(dic, path='/home/arya/storage/pmc'):
     import operator
     dic= sorted(dic.items(), key=operator.itemgetter(1))
     with open(path+'.dic','w') as file:
         for w in dic:
             print >> file,w[0]   
 
+def writeBoW(X, inv_idx, path='/home/arya/storage/pmc'):
+    with open(path+'.dat','w') as file:
+        nz=X.nonzero()
+        for i in range(X.shape[0]):
+            n=X[i].nnz
+            if n<5:
+                continue
+            nz=X[i].nonzero()
+            dt=''
+            for j in nz[1]:
+                if inv_idx[j]<0:
+                    continue
+                dt+= ' {}:{}'.format(int(inv_idx[j]),X[i,j])
+            print >> file,n,dt
+
+def writeDic(dic, path='/home/arya/storage/pmc'):
+    with open(path+'.dic','w') as file:
+        for w in dic:
+            print >> file,w   
+
 def write_to_lda_format(db_conn,param):
     DTs=db_conn.getDT()
     dic=db_conn.get_dic()
     writeBoW(DTs, param['src'].replace('.db','.dat'))
     writeDic(dic, param['src'].replace('.db','.dic'))
+
+def parse_database(db_conn,param):
+    DT, dic, j={}, {}, 0
+    if param['resume']:
+        dic=db_conn.get_dic()
+    db_conn.log( '#Abstracts\t#DicWords')
+    Abstracts, DTs, IDs=[],[], [] # Buffer
+    while 1:
+        j+=1
+        rec=db_conn.getRawROW() # get a row from source database process it and insert it to destination database
+        if rec is None:
+            break
+        ID,abs = rec[0], rec[1]
+        if 'parse' in param['pipeline']:
+            ID,abs = rec[0], parse(abs)
+#         if 'clean' in param['pipeline']:
+#             ID,abs = rec[0], clean(abs)
+        dic, DT= insertToDic(dic, abs)
+        IDs.append(ID)
+        Abstracts.append(abs)
+        DTs.append(DT)
+        if not ID%param['batchsize']:
+            db_conn.log( '{0}\t{1}'.format(ID,len(dic)))
+            db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs, dic)
+            Abstracts, DTs, IDs=[],[], []  # Releasing buffer
+            exit(1)
+    db_conn.log( '{0}\t{1}\nDone!'.format(ID,len(dic)))
+    db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
 
 if __name__ == '__main__':
     def exit_with_help():
@@ -241,57 +392,39 @@ Usage: preprocess.py [options]
 options :
 -src {source database path} (default /home/public/hctest.db)
 -dst {destination database path} (default /home/public/abstracts.db)
--D {0,1}: deletes tables if they exit (default 0)
+-D {0,1}: deletes tables if they exit (default 1)
 -r {0,1} : resume from the last record inserted (default 0) 
 -p {parse, parse-clean, reduce} process pipeline (default parse-clean) 
 -R {runname}  (default process pipeline)
 -th {threshold for tfidf} (default 0)
 -b {batchsize} (default 5000)
 """)
-    param={}
     if len(sys.argv) < 2:
         exit_with_help()
-    options = sys.argv[1:]
+
     try:
-        param=parse_options(options)
+        param=parse_options(sys.argv[1:])
+#         param['src']= '/home/arya/storage/parsed.db'
+#         param['src']= '/home/arya/parsed.db'
         with dbConnector(param) as db_conn:
             if param['pipeline']=='tfidf':
                 tfidf=get_corpus_tfidf(db_conn)
                 db_conn.insert_tfidf(tfidf)
             elif param['pipeline']=='reduce':
+                param['dst']=param['src'].replace('.db', '{}.db'.format(str(param['th']).replace('.', '')))
                 reduce_to_th(db_conn,param)
             elif param['pipeline']=='convertlda':
                 write_to_lda_format(db_conn,param)
-            else:
-                DT, dic, j={}, {}, 0
-                if param['resume']:
-                    dic=db_conn.get_dic()
-                db_conn.log( '#Abstracts\t#DicWords')
-                Abstracts, DTs, IDs=[],[], [] # Buffer
-                while 1:
-                    j+=1
-                    rec=db_conn.getRawROW() # get a row from source database process it and insert it to destination database
-                    if rec is None:
-                        break
-                    ID,abs = rec[0], rec[1]
-                    
-                    if 'parse' in param['pipeline']:
-                        ID,abs = rec[0], parse(abs)
-                    if 'clean' in param['pipeline']:
-                        ID,abs = rec[0], clean(abs)
-                    dic, DT= insertToDic(dic, abs)
-                    IDs.append(ID)
-                    Abstracts.append(abs)
-                    DTs.append(DT)
-                    if not ID%param['batchsize']:
-                        db_conn.log( '{0}\t{1}'.format(ID,len(dic)))
-                        db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs, dic)
-                        Abstracts, DTs, IDs=[],[], []  # Releasing buffer
-                        exit(1)
-                db_conn.log( '{0}\t{1}\nDone!'.format(ID,len(dic)))
-                db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
+            elif param['pipeline']=='clean':
+                corpus=db_conn.getAll()
+                corpus= map(lambda x: x[0], corpus)
+                clean(corpus)
+            elif param['pipeline']=='parse':
+                parse_database(db_conn, param)
+                
     except (IOError,ValueError) as e:
         sys.stderr.write(str(e) + '\n')
+        print str(e)
         with open(param['runname']+'.error', 'w') as filee:
             print >> filee, str(e)
             filee.flush()
