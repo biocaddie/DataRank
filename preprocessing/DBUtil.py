@@ -2,7 +2,7 @@ import sqlite3;
 
 class dbConnector():
     def __init__(self, param):
-        self.run_name=param['runname'];
+        self.log_path=param['dst'].replace('.db','.log');
         if 'clean' in param['pipeline']:
             self.src = sqlite3.connect(param['src']);
             self.srccur = self.src.cursor();
@@ -168,7 +168,8 @@ class dbConnector():
         
     
     def log(self, str):
-        with open(self.run_name+'.log','a') as fileout:
+        with open(self.log_path+'.log','a') as fileout:
+            print str
             print >> fileout , str
             fileout.flush()
            

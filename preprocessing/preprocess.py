@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 from sklearn.feature_extraction.text import CountVectorizer
 from stemming.porter2 import stem
+import os
 import sys;
 import re;
+import collections
 from DBUtil import *
 import pylab as P
 import string
 from numpy import array, ones, nonzero
+import Stemmer #PyStemmer
+english_stemmer = Stemmer.Stemmer('en')
+db_conn=0
 
 def parse(abs):
     """
@@ -47,8 +52,6 @@ def clean_old(abs):
 #     abs = " ".join([stem(word) for word in abs.split(" ")])
     return abs
 
-import Stemmer #PyStemmer
-english_stemmer = Stemmer.Stemmer('en')
 class StemmedCountVectorizer(CountVectorizer):
     def build_analyzer(self):
          analyzer = super(CountVectorizer, self).build_analyzer()
@@ -78,7 +81,6 @@ def inverse_index(IDX,idx):
 def remove_low_freq_words(X,th=3):
     print 'Removing low freq words... (' ,
     nz= X.nonzero()
-    import collections
     word_freq=  map(lambda x: x[1], collections.Counter(nz[1]).items())
     to_remove=[]
     for i in range(len(word_freq)):
@@ -92,55 +94,61 @@ def remove_low_freq_words(X,th=3):
     X.eliminate_zeros()
     return X
     
-def clean(corpus, th =0.0, do_stemming=True):
-    th=0.01
-#     do_stemming=False
-    if do_stemming:
+def clean(corpus, param):
+    param['do_stemming']=True
+    db_conn.log( 'Cleaning: {}   Min TF={}   Min TFIDF={}'.format(('Not','')[param['do_stemming']] + 'Stemming', param['thtf'], param['thtfidf'] ))
+    out_path = param['dst'].replace('.db','')
+    
+    if param['do_stemming']:
         vectorizer = StemmedCountVectorizer(min_df=1,stop_words='english', analyzer='word', ngram_range=(1,1),token_pattern=r"\b[a-z]\w+\b")
     else:
         vectorizer = CountVectorizer(min_df=1,stop_words='english', analyzer='word', ngram_range=(1,1),token_pattern=r"\b[a-z]\w+\b")
         
-    print 'Creating BoW...'
+    db_conn.log( 'Creating BoW...')
     X=vectorizer.fit_transform(corpus)
     dic=array(vectorizer.get_feature_names())
 #     writeDic(dic,path='/home/arya/storage/pmc.full')
-    IDX=range(len(dic))
-    corpus_stats(X)
+    term_idx_all=range(len(dic))
+    iiii= corpus_stats(X)
+    for (i,j) in zip(term_idx_all,iiii):
+        if i!=j:
+            print i,j
     
-    if th>0:
-        X=tfidf_th(X,th)
-        idx=corpus_stats(X)
+    if param['thtfidf']>0:
+        X=tfidf_th(X,param['thtfidf'])
+        term_idx_clean=corpus_stats(X)
     
-    X=remove_low_freq_words(X,th=20)
-    idx=corpus_stats(X)
+    X=remove_low_freq_words(X,param['thtf'])
+    term_idx_clean=corpus_stats(X)
     
-    inv_idx = inverse_index(IDX, idx)
-    removed=list(set(range(len(dic)))-set(idx))
+    inv_idx_full2clean = inverse_index(term_idx_all, term_idx_clean)
+    removed=list(set(range(len(dic)))-set(term_idx_clean))
     removed = dic[removed]
-    path='/home/arya/storage/pmc'
-    writeBoW(X, inv_idx,path)
-    writeDic(dic[idx],path)
+    writeBoW(X, inv_idx_full2clean, out_path)
+    writeDic(dic[term_idx_clean],out_path)
      
 
 def corpus_stats(X, do_plot=False):
-    P.ion()
+#     P.ion()
     nz= X.nonzero()
-    import collections
-    doc_length= map(lambda x: x[1], collections.Counter(nz[0]).items())
-    word_freq=  map(lambda x: x[1], collections.Counter(nz[1]).items())
-    doc_id= map(lambda x: x[0], collections.Counter(nz[0]).items())
-    word_id=  map(lambda x: x[0], collections.Counter(nz[1]).items())
-    print 'There are {} docs with {} words and dic size of {} '.format(len(doc_id),X.nnz, len(word_id))
+    
+    
+    doc_lengths= map(lambda x: x[1], collections.Counter(nz[0]).items()) # lengths of docs in the corpus nz[0] rows of nonzero elemenrs
+    doc_ids= map(lambda x: x[0], collections.Counter(nz[0]).items())
+    
+    term_idfs=  map(lambda x: x[1], collections.Counter(nz[1]).items()) # number of happenings of terms in different docs
+    term_ids=  map(lambda x: x[0], collections.Counter(nz[1]).items())
+    db_conn.log( 'There are {} docs with {} words and dic size of {} '.format(len(doc_ids),X.nnz, len(term_ids)))
     if do_plot:
         P.figure()
         P.subplot(1,2,1)
-        n, bins, patches = P.hist(doc_length, max(doc_length),  histtype='stepfilled')
+        n, bins, patches = P.hist(doc_lengths, max(doc_lengths),  histtype='stepfilled')
         P.title('Document lenghths')
         P.subplot(1,2,2)
         P.title('Word Frequency')
-        n, bins, patches = P.hist(word_freq, max(word_freq),  histtype='stepfilled')
+        n, bins, patches = P.hist(term_idfs, max(term_idfs),  histtype='stepfilled')
         P.show()
-    return word_id
+    return term_ids
 
 
 def insertToDic(dic,abs):
@@ -187,7 +195,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':1, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'th':0}
+    param={'src':'/home/public/hctest.db','pipeline':'parse-clean', 'delete_tables':1, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'thtfidf':0, 'thtf':20, 'do_stemming':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -209,20 +217,28 @@ def parse_options(options):
         elif options[i] == '-b':
             i = i + 1
             param['batchsize'] = int(options[i])
-        elif options[i] == '-th':
+        elif options[i] == '-thtf':
             i = i + 1
-            param['th'] = float(options[i])
+            param['thtf'] = int(options[i])
+        elif options[i] == '-thtfidf':
+            i = i + 1
+            param['thtfidf'] = float(options[i])
+        elif options[i] == '-stm':
+            i = i + 1
+            param['do_stemming'] = int(options[i])
         i = i + 1
-    import os
+    
     if param['pipeline']=='reduce':
         param['dst']=param['src'].replace('.db', '{}.db'.format(str(param['th']).replace('.', '')))
-	param['runname'] = param['pipeline']+ str(param['th']).replace('.', '')
+    if param['pipeline']=='clean':
+        param['dst']= param['src'].replace('.db','.clean.tf{}{}{}.db'.format(param['thtf'],('','.stemmed')[param['do_stemming']],('','.tfidf'+str(param['thtfidf']))[param['thtfidf']>0]))
+	param['runname'] = param['pipeline']+ str(param['thtf']).replace('.', '')
     if not os.path.exists(param['src']):
         raise IOError('source database not found')
     
     
     if 'runname' not in param.keys():
-        param['runname']=param['pipeline']
+        param['runname']=os.path.basename(param['dst'].replace('.db',''))
     return param
     
 
@@ -237,7 +253,7 @@ def tf(word, abs):
 def get_idf(TD,N):
     from math import log
     w= len(TD)
-    print '{0} documents in corpus and {1} terms in the dictionary.'.format(N,w) 
+    db_conn.log( '{0} documents in corpus and {1} terms in the dictionary.'.format(N,w) )
     idf=[]
     i=0
     while i<w:
@@ -257,13 +273,13 @@ def get_tfidf(ID, idf, DTs):
         doc_tfidf[k]=tfidf_score
     return doc_tfidf
      
-def get_corpus_tfidf(db_conn):
-    print "Computing IDF..."
+def get_corpus_tfidf():
+    db_conn.log( "Computing IDF...")
     n=db_conn.getNumDocs()
     M=db_conn.getTD() 
     idf=get_idf(M, n)
     
-    print "Computing TFIDF..."
+    db_conn.log( "Computing TFIDF...")
     M=db_conn.getDT()
     DT_tfidf, i=[], 0
     while i<n:
@@ -283,7 +299,7 @@ def reduce_abs(abs_old, dt_old, tfidf, dic_old_inverse,th):
     abs=abs.replace('  ',' ').strip()
     return abs
 
-def reduce_to_th(db_conn,param):
+def reduce_to_th(param):
     dic={}
     dic_old=db_conn.get_dic()
     dic_old_inverse = {value: key for (key, value) in dic_old.items()}
@@ -351,13 +367,30 @@ def writeDic(dic, path='/home/arya/storage/pmc'):
         for w in dic:
             print >> file,w   
 
-def write_to_lda_format(db_conn,param):
+def write_to_lda_format(param):
     DTs=db_conn.getDT()
     dic=db_conn.get_dic()
     writeBoW(DTs, param['src'].replace('.db','.dat'))
     writeDic(dic, param['src'].replace('.db','.dic'))
 
-def parse_database(db_conn,param):
+def exit_with_help():
+        print """\
+Usage: preprocess.py [options] 
+options :
+-src {source database path} (default /home/public/hctest.db)
+-dst {destination database path} (default /home/public/abstracts.db)
+-D {0,1}: deletes tables if they exit (default 1)
+-r {0,1} : resume from the last record inserted (default 0) 
+-p {parse, parse-clean, reduce} process pipeline (default parse-clean) 
+-R {runname}  (default process pipeline)
+-thtfidf {threshold for tfidf} (default 0)
+-thtf {threshold for tfidf} (default 20)
+-stm {0, 1}: Stemming (default 0)
+-b {batchsize} (default 5000)
+"""
+
+
+def parse_database(param):
     DT, dic, j={}, {}, 0
     if param['resume']:
         dic=db_conn.get_dic()
@@ -386,47 +419,32 @@ def parse_database(db_conn,param):
     db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
 
 if __name__ == '__main__':
-    def exit_with_help():
-        print("""\
-Usage: preprocess.py [options] 
-options :
--src {source database path} (default /home/public/hctest.db)
--dst {destination database path} (default /home/public/abstracts.db)
--D {0,1}: deletes tables if they exit (default 1)
--r {0,1} : resume from the last record inserted (default 0) 
--p {parse, parse-clean, reduce} process pipeline (default parse-clean) 
--R {runname}  (default process pipeline)
--th {threshold for tfidf} (default 0)
--b {batchsize} (default 5000)
-""")
     if len(sys.argv) < 2:
         exit_with_help()
 
     try:
         param=parse_options(sys.argv[1:])
-#         param['src']= '/home/arya/storage/parsed.db'
-#         param['src']= '/home/arya/parsed.db'
         with dbConnector(param) as db_conn:
             if param['pipeline']=='tfidf':
-                tfidf=get_corpus_tfidf(db_conn)
+                tfidf=get_corpus_tfidf()
                 db_conn.insert_tfidf(tfidf)
             elif param['pipeline']=='reduce':
                 param['dst']=param['src'].replace('.db', '{}.db'.format(str(param['th']).replace('.', '')))
-                reduce_to_th(db_conn,param)
+                reduce_to_th(param)
             elif param['pipeline']=='convertlda':
-                write_to_lda_format(db_conn,param)
+                write_to_lda_format(param)
             elif param['pipeline']=='clean':
                 corpus=db_conn.getAll()
                 corpus= map(lambda x: x[0], corpus)
-                clean(corpus)
+                clean(corpus,param)
             elif param['pipeline']=='parse':
-                parse_database(db_conn, param)
+                parse_database(param)
                 
     except (IOError,ValueError) as e:
-        sys.stderr.write(str(e) + '\n')
         print str(e)
         with open(param['runname']+'.error', 'w') as filee:
             print >> filee, str(e)
             filee.flush()
         sys.exit(1)
+    print 'Done!'
         
