@@ -168,7 +168,7 @@ class dbConnector():
         
     
     def log(self, str):
-        with open(self.log_path+'.log','a') as fileout:
+        with open(self.log_path,'a') as fileout:
             print str
             print >> fileout , str
             fileout.flush()
