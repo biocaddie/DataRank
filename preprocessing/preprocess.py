@@ -12,7 +12,7 @@ from numpy import array, ones, nonzero
 import Stemmer #PyStemmer
 english_stemmer = Stemmer.Stemmer('en')
 db_conn=0
-
+min_doc_length=5
 def parse(abs):
     """
     Extracts abstract and ignores the tags extra white spaces within abstracts.
@@ -118,6 +118,13 @@ def clean(corpus, param):
         X=tfidf_th(X,param['thtfidf'])
         term_idx_clean=corpus_stats(X)
     
+    if param['compute_tfidf']:
+        print 'computing tfidf ...'
+        from sklearn.feature_extraction.text import TfidfTransformer
+        transformer = TfidfTransformer()
+        tfidf = transformer.fit_transform(X)
+        
+    
     X=remove_low_freq_words(X,param['thtf'])
     term_idx_clean=corpus_stats(X)
     
@@ -125,6 +132,7 @@ def clean(corpus, param):
     removed=list(set(range(len(dic)))-set(term_idx_clean))
     removed = dic[removed]
     writeBoW(X, inv_idx_full2clean, out_path)
+    writeBoW(tfidf, inv_idx_full2clean, out_path, tfidf= True)
     writeDic(dic[term_idx_clean],out_path)
      
 
@@ -195,7 +203,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','pipeline':'parse-clean', 'delete_tables':1, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'thtfidf':0, 'thtf':20, 'do_stemming':0}
+    param={'src':'/home/public/hctest.db','pipeline':'parse-clean', 'compute_tfidf':False, 'delete_tables':1, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'thtfidf':0, 'thtf':20, 'do_stemming':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -223,6 +231,8 @@ def parse_options(options):
         elif options[i] == '-thtfidf':
             i = i + 1
             param['thtfidf'] = float(options[i])
+        elif options[i] == '-tfidf':
+            param['thtfidf'] = True
         elif options[i] == '-stm':
             i = i + 1
             param['do_stemming'] = int(options[i])
@@ -272,7 +282,7 @@ def get_tfidf(ID, idf, DTs):
 #         if tfidf_score > TH:
         doc_tfidf[k]=tfidf_score
     return doc_tfidf
-     
+
 def get_corpus_tfidf():
     db_conn.log( "Computing IDF...")
     n=db_conn.getNumDocs()
@@ -347,12 +357,12 @@ def writeDic_old(dic, path='/home/arya/storage/pmc'):
         for w in dic:
             print >> file,w[0]   
 
-def writeBoW(X, inv_idx, path='/home/arya/storage/pmc'):
-    with open(path+'.dat','w') as file:
+def writeBoW(X, inv_idx, path='/home/arya/storage/pmc', tfidf=False, min_doc_length=5):
+    with open(path+('.dat','.tfidf')[tfidf],'w') as file:
         nz=X.nonzero()
         for i in range(X.shape[0]):
             n=X[i].nnz
-            if n<5:
+            if n<min_doc_length:
                 continue
             nz=X[i].nonzero()
             dt=''
@@ -417,6 +427,7 @@ def parse_database(param):
             exit(1)
     db_conn.log( '{0}\t{1}\nDone!'.format(ID,len(dic)))
     db_conn.insertDocs_updateDic(IDs, Abstracts ,DTs,dic)
+
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
