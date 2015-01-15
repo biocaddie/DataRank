@@ -200,10 +200,11 @@ def insertToReducedDic(dic, dic_old, abs):
    
 
 def parse_options(options):
+    print options
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','pipeline':'parse-clean', 'compute_tfidf':False, 'delete_tables':1, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'thtfidf':0, 'thtf':20, 'do_stemming':0}
+    param={'src':'/home/public/hctest.db','pipeline':'parse-clean', 'compute_tfidf':False, 'delete_tables':1, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'thtfidf':0, 'thtf':0, 'do_stemming':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -232,7 +233,7 @@ def parse_options(options):
             i = i + 1
             param['thtfidf'] = float(options[i])
         elif options[i] == '-tfidf':
-            param['thtfidf'] = True
+            param['compute_tfidf'] = True
         elif options[i] == '-stm':
             i = i + 1
             param['do_stemming'] = int(options[i])

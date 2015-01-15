@@ -3,10 +3,9 @@ import sqlite3;
 class dbConnector():
     def __init__(self, param):
         self.log_path=param['dst'].replace('.db','.log');
+        self.src = sqlite3.connect(param['src']);
+        self.srccur = self.src.cursor();
         if 'clean' in param['pipeline']:
-            self.src = sqlite3.connect(param['src']);
-            self.srccur = self.src.cursor();
-            
             self.dst = sqlite3.connect(param['dst']);
             self.dstcur = self.dst.cursor();
             self.srccur.execute('select abs from abs where length(abs)>5');
@@ -14,9 +13,6 @@ class dbConnector():
                 self.drop_tables('all')
             self.create_tables('all') 
         if 'parse' in param['pipeline']:
-            self.src = sqlite3.connect(param['src']);
-            self.srccur = self.src.cursor();
-            
             self.dst = sqlite3.connect(param['dst']);
             self.dstcur = self.dst.cursor();
             if param['resume']:
@@ -30,23 +26,18 @@ class dbConnector():
                     self.drop_tables('all')
                 self.create_tables('all')
         elif 'tfidf' in param['pipeline']:
-            self.src = sqlite3.connect(param['src']);
-            self.srccur = self.src.cursor();
             self.dstcur, self.dst = self.srccur, self.src
             if param['delete_tables']:
                 self.drop_tables('tfidf')
             self.create_tables('tfidf')
         elif 'reduce' in param['pipeline']:
-            self.src = sqlite3.connect(param['src']);
-            self.srccur = self.src.cursor();
             self.dst = sqlite3.connect(param['dst']);
             self.dstcur = self.dst.cursor();
             if param['delete_tables']:
                 self.drop_tables('all')
             self.create_tables('all')
-        elif 'convertlda' in param['pipeline']:
-            self.src = sqlite3.connect(param['src']);
-            self.srccur = self.src.cursor();
+        elif 'mesh' in param['pipeline']:
+            self.srccur.execute('select header from article_mesh');
     
     def drop_tables(self,tables):
         if tables=='all':
