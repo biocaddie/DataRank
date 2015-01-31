@@ -95,7 +95,7 @@ def remove_low_freq_words(X,th=3):
     return X
     
 def clean(corpus, param):
-    param['do_stemming']=True
+#     param['do_stemming']=True
     db_conn.log( 'Cleaning: {}   Min TF={}   Min TFIDF={}'.format(('Not','')[param['do_stemming']] + 'Stemming', param['thtf'], param['thtfidf'] ))
     out_path = param['dst'].replace('.db','')
     
@@ -107,7 +107,7 @@ def clean(corpus, param):
     db_conn.log( 'Creating BoW...')
     X=vectorizer.fit_transform(corpus)
     dic=array(vectorizer.get_feature_names())
-#     writeDic(dic,path='/home/arya/storage/pmc.full')
+#     writeDic(dic,path='/home/arya/bigdata/pmc/pmc.full')
     term_idx_all=range(len(dic))
     iiii= corpus_stats(X)
     for (i,j) in zip(term_idx_all,iiii):
@@ -351,14 +351,14 @@ def writeBoW_old(DTs, path='/home/arya/pmc'):
             dt=dt.replace(',', ' ')
             print >> file,n,dt
 
-def writeDic_old(dic, path='/home/arya/storage/pmc'):
+def writeDic_old(dic, path='/home/arya/bigdata/pmc/pmc'):
     import operator
     dic= sorted(dic.items(), key=operator.itemgetter(1))
     with open(path+'.dic','w') as file:
         for w in dic:
             print >> file,w[0]   
 
-def writeBoW(X, inv_idx, path='/home/arya/storage/pmc', tfidf=False, min_doc_length=5):
+def writeBoW(X, inv_idx, path='/home/arya/bigdata/pmc/pmc', tfidf=False, min_doc_length=5):
     with open(path+('.dat','.tfidf')[tfidf],'w') as file:
         nz=X.nonzero()
         for i in range(X.shape[0]):
@@ -373,7 +373,7 @@ def writeBoW(X, inv_idx, path='/home/arya/storage/pmc', tfidf=False, min_doc_len
                 dt+= ' {}:{}'.format(int(inv_idx[j]),X[i,j])
             print >> file,n,dt
 
-def writeDic(dic, path='/home/arya/storage/pmc'):
+def writeDic(dic, path='/home/arya/bigdata/pmc/pmc'):
     with open(path+'.dic','w') as file:
         for w in dic:
             print >> file,w   
