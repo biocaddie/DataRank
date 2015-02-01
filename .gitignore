@@ -1,4 +1,10 @@
 #Ignore Unrelated System Files
+screenlog*
+*.out
+*.log
+*.aux
+*.bbl
+*.dvi
 .DS_Store
 .project
 .pydevproject
