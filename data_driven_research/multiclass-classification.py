@@ -188,6 +188,7 @@ def get_fearure_weights(d=103, years=range(2004,2017)):
         W=np.append(W,alpha.dot(X)[None,:],axis=0)
     np.set_printoptions(linewidth='1000', precision=3, edgeitems=55, suppress=True)
     
+    print 'Feature Weights:'
     print W
     
     sumW= W.sum(0)
@@ -218,9 +219,3 @@ if __name__ == '__main__':
   
     pdf.close()
     print 'Done!'
-    with open('/home/arya/out/trends.pkl') as f:
-        Data=pickle.load(f)
-        print Data['info']
-        print Data['W']
-        print Data['top10']
-        print Data['periods']
