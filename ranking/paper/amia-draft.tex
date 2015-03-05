@@ -36,25 +36,142 @@
        \addr Department of Computer Science and Engineering\\
        \AND
        \name Xiaoqian Jiang, PhD \email x1jiang@ucsd.edu \\
+       \name Wei Wei, MS \email w2wei@ucsd.edu \\
        \addr Division of Biomedical Informatics\\
        University of California, San Diego\\
-       La Jolla, CA 92037, USA
+       9500 Gilman Dr., La Jolla, CA 92037, USA
        }
 
 \editor{}
 
 \maketitle
 \begin{abstract} 
-In this paper, we propose an online ranking algorithm, DataRank for ranking biomedical datasets that are used in the papers index in PubMed Central. DataRank's input is a bipartite citation graph between datasets and articles which each paper is represented by set of corresponding MeSH terms. DataRank works by imputing a set of MeSH terms to each dataset as features, by aggregating MeSH terms from the connected papers in the bipartite graph. For each search query, DataRank first maps the query to set of MeSH terms and present a \emph{offline} ranking of datasets for the MeSH-Query using a Bayesian approach which the likelihood is proportional to Jaccard index and prior is proportional to number of citations of that dataset. DataRank is also extended to a \emph{online} algorithm by incorporating user-feedbacks regarding ranking relevance. The online DataRank again takes an Bayesian approach  which uses offline DataRank as its prior and computes its likelihood by estimating the user rating for unknown values using collaborative filtering. A demo web search engine has been developed to rank more than 20,000 dataset that has been discovered in more than 1 million papers.
+In this paper, we propose an online ranking algorithm, DataRank for ranking biomedical datasets that are used in the papers indexed in PubMed Central. DataRank takes the bipartite citation graph between datasets and articles and dataset features, i.e. MeSH terms, as input and rank datasets according to their relevance to the searching query as well as user feedbacks. DataRank constituted dataset features by aggregating MeSH terms from the connected papers in the bipartite graph. For each search query, DataRank first maps the "free text query" to a MeSHQuery and yield an \emph{offline} ranking of datasets for the MeSHQuery using a Bayesian approach which the likelihood is proportional to Jaccard index and prior is proportional to number of citations of that dataset. DataRank is also extended to a \emph{online} algorithm by incorporating user-feedbacks regarding ranking relevance. The online DataRank again takes an Bayesian approach  which uses offline DataRank as its prior and computes its likelihood by estimating the user rating for unknown values using collaborative filtering. A demo web search engine has been developed to rank more than 20,000 dataset that has been discovered in more than 1 million papers.
 \end{abstract} 
 
 
 \section{Introduction} \label{sec:introduction}
-\cite{ptm} 
+Over the past decades, a wide range of datasets including clinical, gnomic, imaging, behavioural, etc. is created in biomedical research, and there is no unified and systematic way for retrieving them. Although several repositories(e.g. DBGap, TCGA, GEO, etc.) has been established \cite{nih-repo}, unfortunately like many cases of big-data applications with a "diminishing return", retrieval of datasets is getting harder as the number of repositories and active datasets increases. In fact, the current indexing and searching system suffers from a number of problems, including
+\begin{enumerate}[(I)]
+	\item {\bf Indexing} of datasets rely on human resources, which is a costly and noisy precess. \label{item:indexing}
+	\item {\bf Searching} between and within the repositories is not well developed, and user should know the dataset and repository prior to search.
+	\item {\bf Integration} of the repositories is widely ignored and indexing, searching and maintenance of each repository is being done independently.
+	\item {\bf Privacy}, only contain public datasets, which are only a small fraction of all the datasets is being generated. (Not sure, should check it out later)
+	\item {\bf Ranking} of search results of each repository is being done naively based matching of the query to the dataset's limited metadata.
+	\item {\bf Recommendation} is now is a part of most of modern information retrieval systems with large amount of users and items, but it has not been considered for datasets and research scientists. \label{item:recommendation}
+\end{enumerate}
+
+In this paper, we provide a solution for problems \eqref{item:indexing}-\eqref{item:recommendation}, respectively by
+\begin{enumerate}[(i)]
+	\item {\bf Crawling} the PMC articles for patterns and rules provided by NIH to discover datasets directly from papers. \label{item:crawiling}
+	\item {\bf Integrating} all the discovered datasets into one unified repository. \label{item:integrating}
+	\item {\bf Providing}, general information for both private and public datasets.
+	\item {\bf Ranking} datasets using different informative features including MeSH, number of citations, etc.
+	\item {\bf Recommendation} of other datasets beyond current search results to make related datasets even more discoverable. \label{item:recommendation-sol}
+\end{enumerate}
+
+
+It should be noted that the task of crawling and indexing datasets is a non-trivial and independent task to others, so the methods and techniques for implementing it are outside of the scope of this manuscript. Therefore, in the rest of this paper we mainly focus on developing efficient methods for \eqref{item:integrating}-\eqref{item:recommendation-sol} and for the crawling task we take an simple method as follows: 
+By creating regular expressions for all the citation rules provided by NIH for each repository we discovered more than 20,000 datasets out of more than 1 million PMC full text articles and created a bipartite graph between dataset ids and paper ids. The  product of crawling process is actually a bipartite graph, though incomplete, between articles and datasets. In the rest of this paper we describe our methodology to process this bipartite graph, Figure \ref{fig:bipartite}.
+
+The rest of this paper is organized as follows: in section \ref{sec:background} we first review existing methods for enhancing information retrieval systems and then in section \ref{sec:methodology} we present out methods for the aforementioned problems. We outline implementation remarks and experimental study in section \ref{sec:Experiments} and finally we make conclusions and state possible future works in section \ref{sec:conclusions}.
+
+\begin{figure}\label{fig:bipartite}
+\centering
+\includegraphics[scale=0.7]{bipartite.png}
+\caption{A bipartite graph between $m$ datasets and $n$ papers with MeSH terms as their features. PID and DID are Paper ID and Dataset ID respectively where existence of an edge between a paper and a dataset implies that dataset is used in that paper.}
+\end{figure}
+
 \section{Background} \label{sec:background}
+\begin{itemize}
+\item information retrieval
+\item Pubmed
+\item MeSH
+\item ranking
+
+\item recommendation
+
+\end{itemize}
+
 \section{Methodology} \label{sec:methodology}
-\section{Implementation} \label{sec:implementation}
-\section{Experiments} \label{sec:Experiments}
+The DataRank algorithm is an online algorithm which updated its predictive model after receiving explicit and implicit feedbacks from users. Specifically, we resort to incorporate user feedbacks explicitly you giving an option to the user to rate the search results, and we interpret user clicks as implicit feedbacks. Therefore, for every new user, the algorithm works in an offline manner and after receiving user feedbacks it updates the model to present user specific rankings. In the following parts we first describe the features and then explain our DataRank model offline ranking and finally extend offline DataRank to online setting.
+
+\subsection{Features}
+In this paper we use the corresponding set of MeSH terms as features for each articles and use the bag-of-words representation for representing documents. More precisely, the corpus $n$ articles is represented by a $d \times n$ binary matrix, $M\in \{0,1\}^{d\times n}$. Similarly we define the matrix of $X\in \{0,1\}^{d\times m}$ for representing $m$ dataset via bag-of-words of MeSH terms, where $\bfx_i$ is the $i^{th}$ column of $X$, is $i^{th}$ document in the corpus. Also, for each dataset, the dataset  label $\bfy_i$, is the dataset identifier which is a categorical variable, i.e., $\bfy \in \{{1\cdots m}\}^m$, the bipartite graph is represented via the adjacency matrix $A\in \{0,1\}^{n\times m}$. Since we are considering binary features for both documents and datasets, the dataset features can be readily obtained from the document features and adjacency matrix:
+\beq
+X=\min( MA , 1)
+\eeq
+where $\min(\cdot)$ is a elementwise operator over its matrix argument.
+
+\subsection{Offline Ranking}
+For the problem of ranking we consider a probabilistic approach and propose a graphical model to specify dependencies between random variables in the model. Therefore, $\bfx, \bfy$ should henceforth be understood as realizations of the corresponding random variables.
+We also introduce another random variable $\bfq$ for search queries over the same sample space as $\bfx$, i.e., MeSH terms which $\bfq \in\{0,1\}^{d}$.  Finally, $\bfc$ is an (observed) random variable which defines a prior over the labels $\bfy$.
+The graphical model shown in Figure \ref{fig:pgm}-(a). It should be noted that, in any case variables $\bfx$ (dataset features) and $\bfc$ (datasets prior) are observed and we never need their marginal distributions and therefore we only consider the query $\bfq$ as evidence.
+
+In this model, the problems of ranking for a given query $\bfq$ is to find the posterior distribution for the dataset labels given evidence. More precisely the posterior distribution
+\beq
+\pr(\bfy | \bfq,\bfc, \bfx) \propto \pr(\bfy | \bfc ) \pr(\bfq | \bfx)
+\eeq
+full specifies the ranking, where the posterior distribution is expanded according to the graphical model Figure \ref{fig:pgm}-(a). 
+Since, $\pr(\bfy | \bfc )$  is not function of evidence, we can legitimately consider it as dataset-prior and consider $\pr(\bfq | X)$ as query-likelihood.
+
+In the standard statistical modelling procedures, the next step is to specify dataset-prior and query-likelihood distributions.
+
+\paragraph{Query-likelihood.} Since the binary feature vector $\bfx$ and query $\bfq$ are representation of sets, using Vann diagram, we can easily compute the likelihood
+\beq
+\pr(\bfq | \bfx)= \frac{\pr(\bfq , \bfx)}{\pr(\bfx)} = \frac{|\bfq \cap \bfx|}{|\bfx|}
+\eeq
+where set operations are applied to the set representation of the binary vectors.
+
+However, this probability does not account for mismatches of terms in the query and features, and this leads to the phenomena that two queries whit the same number of matches but different number of mismatches have the same probability. To remedy this crucial problem, we can add the number of mismatches to the denominator, which is equivalent to condition on $\bfx \cup \bfq$
+\beq \label{eq:jaccard}
+\widehat{\pr}(\bfq | \bfx ) \propto \pr(\bfq | \bfx \cup \bfq)= \frac{|\bfq \cap \bfx|}{|\bfq \cup \bfx|}
+\eeq
+the value of \eqref{eq:jaccard} is known as Jaccard index or Tanimoto or Jaccard coefficient \cite{book:IR}. Thus for the query likelihood we have
+\beq \label{eq:jaccard}
+\widehat{\pr}(\bfq | \bfx ) = \frac{\widehat{\pr}(\bfq | \bfx ) }{\sum_{i=1}^n \widehat{\pr}(\bfq | \bfx_i ) }
+\eeq
+
+\paragraph{Dataset-prior.} Instead of learning a prior for datasets using empirical Bayesian methods, we simply chose to propose a reasonable subjective prior for the datasets. Basically, the better way to think about prior is to imagine the posterior distribution in a scenario where there is no evidence available, which is equivalent to say that what is the best ranking of datasets if do not have a query. There are many ways to answer this question, but a reasonable approach is to sort them based on their general popularity. Interestingly, we can quantitatively specify the popularity for the datasets by taking into account of how many citations they have in the training dataset, i.e., $\bfc=\bfone^TA$. More precisely, we can write prior as
+\beq \label{eq:prior}
+\pr(\bfy | \bfc ) = \frac{\bfc}{ \bfc^T \bfone} = \frac{\bfone^TA}{\bfone^TA \bfone}
+\eeq
+where $\bfone$ is the vector of ones of corresponding dimension.
+\begin{figure}
+\centering
+\begin{tabular}{cc}
+\includegraphics[scale=0.7]{offline-pgm.png} \hspace{0.3in} & \includegraphics[scale=0.7]{online-pgm.png}\\
+(a) & (b)
+\end{tabular}
+\caption{Probabilistic graphical models for offline (a) and online (b) methods for ranking datasets. The shaded nodes are observed variable, arrow implies conditional dependence and rectangles are short hand for replication of the inside nodes. For details see text.}\label{fig:pgm}
+\end{figure}
+So far, we have fully specified the prior and likelihood and hence posterior for the offline model and the ranking of datasets amounts to merely sort datasets decreasingly according to their posterior distribution.
+\subsection{Online Ranking}
+In this part we extend the offline-DataRank to the online setting by incorporating user feedback into ranking. For this porous, we propose a new model, Figure \ref{fig:pgm}-(b), which introduces \emph{incomplete} user ratings $\bfr\in \{0\cdots k \}^{m}$, \emph{completed} user rating $\bfR \in \Rbb_+^m$ and the dataset online-labels $\bfz$, where $k$ is the number of different state of ratings for each result in the ranking and 0 is used to denote unknown values in the ratings. As shown in the graphical model, the online-labels depend on user feedback but, (offline) dataset labels $\bfy$ do not.
+
+The ratings $\bfr$ are initialized with zero value and at each epoch users rates the search results and updates the $\bfr_t$. Similar to offline method, the task is to compute the posterior
+\beq \label{eq:online-posterior}
+\pr (\bfz | \bfr, \bfy, \bfc, \bfq, \bfx)  \propto  \pr (\bfz |\bfr) \pr (\bfy |\bfc,\bfq, \bfx)
+\eeq
+where the factorization induced by the graphical model Figure \ref{fig:pgm}-(b) and in this model evidence is incomplete user rating $\bfr$. Interestingly the offline posterior $\pr (\bfy |\bfc,\bfq, \bfx)$ can be regarded as prior in this model, which implies that without any evidence, user ratings, the online posterior is exactly equal to its prior, i.e., offline posterior, which makes a perfect sense.
+
+Specifying the likelihood $\pr (\bfz |\bfr)$ amounts to determining unknown values in the rating vectors and then normalize it.
+We use collaborative filtering \cite{CF-survey} to estimate unknown values of user ratings for the datasets that has not been rated yet, based on similarity of rated datasets  a vector completion method, to use the sparse and incomplete past ratings to fill the unknown values based on similarity of datasets to the unrated datasets and the all the legitimate ratings. Thus, the key step is to define a similarity measure between datasets. 
+Regarding, the binary MeSH representation of datasets, we opt to use Tanimoto kernel \cite{t-kernel} between datasets for measuring similarity between datasets
+\beq
+K_{i,j} = K(\bfx_i,\bfx_j) =  \frac{\bfk_\cap(\bfx_i,\bfx_j)}{\bfk_\cap(\bfx_i,\bfx_i) + \bfk_\cap(\bfx_j,\bfx_j) - \bfk_\cap(\bfx_i,\bfx_j)}
+\eeq
+where $K$ is a $m \times m$ symmetric positive definite matrix, $\bfk_\cap(\bfx_i,\bfx_j)=\frac{|\phi(\bfx_i) \cap \phi(\bfx_j) |}{|\phi(\bfx_i) \cup \phi(\bfx_j)| }$ is intersection kernel \cite{i-kernel} between $\bfx_i$ and $\bfx_j$, and $\phi(\cdot)$ is a general nonlinear feature function. 
+
+Having a similarity matrix between datasets, using collaborative filtering we can readily fill the unknown values in the rating vector, and compute the likelihood
+\beq \label{eq:online-likelihood}
+\pr(\bfz | \bfr) = \frac{K \bfr}{\bfone^T K \bfr}
+\eeq
+Using \eqref{eq:jaccard} and \eqref{eq:online-likelihood} we can fully specify the online prediction posterior \eqref{eq:online-posterior} and therefore, online ranking for the DataRank algorithm.
+
+\section{Experimental Study} \label{sec:Experiments}
+\subsection{Implementation}
+\subsection{Experiments}
 \section{Conclusions} \label{sec:conclusions}
 
 \bibliography{/home/arya/Documents/library}
