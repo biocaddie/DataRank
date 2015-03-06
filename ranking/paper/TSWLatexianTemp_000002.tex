@@ -63,7 +63,7 @@ Over the past decades, a wide range of datasets including clinical, gnomic, imag
 
 In this paper, we provide a solution for problems \eqref{item:indexing}-\eqref{item:recommendation}, respectively by
 \begin{enumerate}[(i)]
-	\item {\bf Crawling} the PMC articles for patterns and rules provided by NIH to discover datasets directly from papers. \label{item:crawiling}
+	\item {\bf Crawling} the PMC articles for patterns and rules provided by NIH to discover datasets from GEO \cite{geo-citation-rule} and Genbank \cite{genbank-citation-rule} directly from papers. \label{item:crawiling}
 	\item {\bf Integrating} all the discovered datasets into one unified repository. \label{item:integrating}
 	\item {\bf Providing}, general information for both private and public datasets.
 	\item {\bf Ranking} datasets using different informative features including MeSH, number of citations, etc.
@@ -83,15 +83,20 @@ The rest of this paper is organized as follows: in section \ref{sec:background} 
 \end{figure}
 
 \section{Background} \label{sec:background}
-\begin{itemize}
-\item information retrieval
-\item Pubmed
-\item MeSH
-\item ranking
+Probably, information retrieval is the point when hypes about "Big Data" are revealed, and as repositories of data are getting larger, effective information retrieval from them is getting much harder. For example, in order to improve the performance of a large number of auxiliary tools has been developed to enhance retrieval of rapidly growing PubMed database \cite{pubmed-survey}.
+Each query is mapped to a set of MeSH terms via Automatic Term Mapping (ATM) \cite{pubmed-atm}
 
-\item recommendation
+refmed \cite{refmed}
 
-\end{itemize}
+RankSVM \citep{svm-rank-j}
+
+learning to rank \cite{yahoo-rank-challange}
+
+recommendation 
+\cite{recommender-survey}
+
+collaborative filtering
+\cite{cff-survey}
 
 \section{Methodology} \label{sec:methodology}
 The DataRank algorithm is an online algorithm which updated its predictive model after receiving explicit and implicit feedbacks from users. Specifically, we resort to incorporate user feedbacks explicitly you giving an option to the user to rate the search results, and we interpret user clicks as implicit feedbacks. Therefore, for every new user, the algorithm works in an offline manner and after receiving user feedbacks it updates the model to present user specific rankings. In the following parts we first describe the features and then explain our DataRank model offline ranking and finally extend offline DataRank to online setting.
