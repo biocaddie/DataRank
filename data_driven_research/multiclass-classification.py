@@ -205,6 +205,20 @@ def get_fearure_weights(d=103, years=range(2004,2017)):
     
     return W,periods, top10
 
+def run_and_plot_trends():
+    pdf = PdfPages('/home/arya/out/trends.pdf')
+  
+    fig=plot_trends()
+    pdf.savefig(fig)
+    convert_wei_files_to_libsvm()
+    run_multiclass()
+    W,names, top10= get_fearure_weights()
+    for idx in top10:
+        fig= plot_trends(W=W[:12], idx=idx)
+        pdf.savefig(fig)
+  
+    pdf.close()
+
 if __name__ == '__main__':
     pdf = PdfPages('/home/arya/out/trends.pdf')
   

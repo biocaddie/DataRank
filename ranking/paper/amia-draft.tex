@@ -83,15 +83,27 @@ The rest of this paper is organized as follows: in section \ref{sec:background} 
 \end{figure}
 
 \section{Background} \label{sec:background}
-\begin{itemize}
-\item information retrieval
-\item Pubmed
-\item MeSH
-\item ranking
+Probably, information retrieval is the point when hypes about "Big Data" are revealed, because as repositories of data are getting larger, effective information retrieval is getting much harder. For example, in order to close the gaps between the largest information retrieval system in NIH, PubMeD, and the rate of growth of the repository, a number of auxiliary tools has been developed to enhance retrieval of rapidly growing PubMed database \cite{pubmed-survey}. Therefore, as a instance of Big-Data problem, dataset retrieval algorithms should be as efficient as document retrieval, i.e.,  it is of the great  interest to have a PubMed for retrieving rapidly growing datasets.
 
-\item recommendation
+Basically, by default, PubMed takes a free-text query and parse the query as follows
+\begin{enumerate}
+\item tokenizes the query and considers logical and between tokens
+\item maps every token in the query that can be mapped to a MeSH term using Automatic Term Mapping (ATM) \cite{pubmed-atm}.
+\item sorts the results in a reverse chronological order.
+\end{enumerate}
 
-\end{itemize}
+
+refmed \cite{refmed}
+
+RankSVM \citep{svm-rank-j}
+
+learning to rank \cite{yahoo-rank-challange}
+
+recommendation 
+\cite{recommender-survey}
+
+collaborative filtering
+\cite{cff-survey}
 
 \section{Methodology} \label{sec:methodology}
 The DataRank algorithm is an online algorithm which updated its predictive model after receiving explicit and implicit feedbacks from users. Specifically, we resort to incorporate user feedbacks explicitly you giving an option to the user to rate the search results, and we interpret user clicks as implicit feedbacks. Therefore, for every new user, the algorithm works in an offline manner and after receiving user feedbacks it updates the model to present user specific rankings. In the following parts we first describe the features and then explain our DataRank model offline ranking and finally extend offline DataRank to online setting.
