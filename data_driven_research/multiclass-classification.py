@@ -4,6 +4,7 @@ import pickle
 import pylab as P
 from numpy import dtype
 from matplotlib.backends.backend_pdf import PdfPages
+from cupshelpers.ppds import normalize
 
 
 def convert_txt_to_libsvm(path,y):
@@ -95,8 +96,20 @@ def run_multiclass():
         learn_svm(ds, runnrame=get_year_str(y))
 
 
+def smooth(x,y,n=300):
+    from scipy.interpolate import spline
+    x_smooth=np.linspace(x.min(),x.max(),300)
+    y_smooth=spline(x, y, x_smooth)
+    return x_smooth,y_smooth
+
+def plot_curve(y,do_smooth=True):
+    x=np.array(range(len(y)))
+    if do_smooth:
+        x,y=smooth(x, y)
+    P.plot(x,y,linewidth=2)
+
 def plot_trend(yprob, normalization=None,years=range(2004,2015),feature_idx=None, featre_name=None):
-    
+    do_smooth=True
     if feature_idx is None:
         if normalization is not None:
             if not normalization:
@@ -107,8 +120,9 @@ def plot_trend(yprob, normalization=None,years=range(2004,2015),feature_idx=None
                 yprob = yprob  / yprob.sum(normalization)[:,None]
         else:
             title='Counts of Each Repository'
-        P.plot(yprob[:,0],linewidth=2)
-        P.plot(yprob[:,1],linewidth=2)
+        
+        plot_curve(yprob[:,0], do_smooth)
+        plot_curve(yprob[:,1], do_smooth)
         P.title(title)
         P.legend(['GenBank','GEO'],loc='upper left') #0 is Genbank and 1 is GEO
     else:
@@ -119,7 +133,7 @@ def plot_trend(yprob, normalization=None,years=range(2004,2015),feature_idx=None
                 title='Normalized by Year'
         else:
             title='Weights of Each Feature'
-        P.plot(yprob[:,feature_idx],linewidth=2)
+        plot_curve(yprob[:,feature_idx], do_smooth)
         P.title(title)
         if featre_name is None:
             featre_name= 'Mesh'+str(feature_idx)
@@ -132,7 +146,7 @@ def plot_trend(yprob, normalization=None,years=range(2004,2015),feature_idx=None
 
 def plot_trends(path='/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data6/label/', years=range(2004,2015),W=None,idx=None):
     fig=P.figure(figsize=(26, 8), dpi=80)
-    if W is None:
+    if W is None: # plot classes
         W=[]
         for y in years:
             dataset='{}{}_label.txt'.format(path,y)
@@ -169,7 +183,7 @@ def get_alpha_and_SV(path):
         X=map(lambda x:eval( '{' + ','.join(x.split()[1:])+ '}'),lines)
     return alpha, X
         
-def get_fearure_weights(d=103, years=range(2004,2017)):
+def get_fearure_weights(d=103, years=range(2004,2017), normalize=False):
     from svmutil import svm_load_model
     W=np.array([]).reshape(0,d)
     periods=[]  
@@ -188,8 +202,11 @@ def get_fearure_weights(d=103, years=range(2004,2017)):
         W=np.append(W,alpha.dot(X)[None,:],axis=0)
     np.set_printoptions(linewidth='1000', precision=3, edgeitems=55, suppress=True)
     
-    print 'Feature Weights:'
+    if normalize:
+        W=W/ W.sum(1)[:,None]
+    print ('','Normalized')[normalize], 'Feature Weights:'
     print W
+    
     
     sumW= W.sum(0)
     indices = range(len(sumW))
@@ -201,7 +218,7 @@ def get_fearure_weights(d=103, years=range(2004,2017)):
     top10: Top 10 features which has a larger sum over all the periods 
     """
     Data={'W':W, 'periods':periods, 'top10':top10, 'info':info}
-    save_data(Data, '/home/arya/out/trends.pkl')
+    save_data(Data, '/home/arya/out/trends{}.pkl'.format(('','_normalized')[normalize]))
     
     return W,periods, top10
 
@@ -219,17 +236,22 @@ def run_and_plot_trends():
   
     pdf.close()
 
+
 if __name__ == '__main__':
-    pdf = PdfPages('/home/arya/out/trends.pdf')
-  
+    normalize=  False
+    pdf = PdfPages('/home/arya/out/trends{}.pdf'.format(('','_normalized')[normalize]))
     fig=plot_trends()
     pdf.savefig(fig)
     convert_wei_files_to_libsvm()
     run_multiclass()
-    W,names, top10= get_fearure_weights()
+    W,names, top10= get_fearure_weights(normalize=normalize)
     for idx in top10:
-        fig= plot_trends(W=W[:12], idx=idx)
+        fig= plot_trends(W=W[:11], idx=idx)
         pdf.savefig(fig)
-  
+   
     pdf.close()
     print 'Done!'
+
+
+
+
