@@ -71,39 +71,34 @@ In this paper, we provide a solution for problems \eqref{item:indexing}-\eqref{i
 \end{enumerate}
 
 
-It should be noted that the task of crawling and indexing datasets is a non-trivial and independent task to others, so the methods and techniques for implementing it are outside of the scope of this manuscript. Therefore, in the rest of this paper we mainly focus on developing efficient methods for \eqref{item:integrating}-\eqref{item:recommendation-sol} and for the crawling task we take an simple method as follows: 
-By creating regular expressions for all the citation rules provided by NIH for each repository we discovered more than 20,000 datasets out of more than 1 million PMC full text articles and created a bipartite graph between dataset ids and paper ids. The  product of crawling process is actually a bipartite graph, though incomplete, between articles and datasets. In the rest of this paper we describe our methodology to process this bipartite graph, Figure \ref{fig:bipartite}.
-
-The rest of this paper is organized as follows: in section \ref{sec:background} we first review existing methods for enhancing information retrieval systems and then in section \ref{sec:methodology} we present out methods for the aforementioned problems. We outline implementation remarks and experimental study in section \ref{sec:Experiments} and finally we make conclusions and state possible future works in section \ref{sec:conclusions}.
-
 \begin{figure}\label{fig:bipartite}
 \centering
 \includegraphics[scale=0.7]{bipartite.png}
 \caption{A bipartite graph between $m$ datasets and $n$ papers with MeSH terms as their features. PID and DID are Paper ID and Dataset ID respectively where existence of an edge between a paper and a dataset implies that dataset is used in that paper.}
 \end{figure}
 
+It should be noted that the task of crawling and indexing datasets is a non-trivial and independent task to others, so the methods and techniques for implementing it are outside of the scope of this manuscript. Therefore, in the rest of this paper we mainly focus on developing efficient methods for \eqref{item:integrating}-\eqref{item:recommendation-sol} and for the crawling task we take an simple method as follows: 
+By creating regular expressions for all the citation rules provided by NIH for each repository we discovered more than 20,000 datasets out of more than 1 million PMC full text articles and created a bipartite graph between dataset ids and paper ids. The  product of crawling process is actually a bipartite graph, though incomplete, between articles and datasets. In the rest of this paper we describe our methodology to process this bipartite graph, Figure \ref{fig:bipartite}.
+
+The rest of this paper is organized as follows: in section \ref{sec:background} we first review existing methods for enhancing information retrieval systems and then in section \ref{sec:methodology} we present out methods for the aforementioned problems. We outline implementation remarks and experimental study in section \ref{sec:Experiments} and finally we make conclusions and state possible future works in section \ref{sec:conclusions}.
+
+
+
 \section{Background} \label{sec:background}
-Probably, information retrieval is the point when hypes about "Big Data" are revealed, because as repositories of data are getting larger, effective information retrieval is getting much harder. For example, in order to close the gaps between the largest information retrieval system in NIH, PubMeD, and the rate of growth of the repository, a number of auxiliary tools has been developed to enhance retrieval of rapidly growing PubMed database \cite{pubmed-survey}. Therefore, as a instance of Big-Data problem, dataset retrieval algorithms should be as efficient as document retrieval, i.e.,  it is of the great  interest to have a PubMed for retrieving rapidly growing datasets.
+Probably, information retrieval is the point when hypes about "Big Data" are came into realization, because as repositories of data are getting larger, effective information retrieval is getting much complicated. For example, in order to close the gaps between the largest information retrieval system in NIH, PubMeD, and the rate of growth of the repository, a number of techniques has been including
+\begin{itemize}
+\item relevance ranking \cite{ranking-medline}, where documents are ranked according to Term-Frequency Inverse-Document-Frequency (TF-IDF) relevance to the free-text query.
+\item query expansion \cite{mesh-query}, which the (mappable) tokens in the query mapped to a MeSH term using Automatic Term Mapping (ATM) \cite{pubmed-atm} and query is augmented with a set of MeSH terms,
+\item relevance feedback \cite{refmed}, where user feedbacks in previous ranking results are used to improve ranking results,
+\item etc. \cite{pubmed-survey}
+\end{itemize}
+developed to enhance retrieval of articles. By default, PubMed uses a hybrid approach to process a free-text query \cite{pubmed-help} by expanding the query using Automatic Term Mapping (ATM) \cite{pubmed-atm} and sorts the results in a reverse chronological order based on the document TF-IDF relevance to the query.
 
-Basically, by default, PubMed takes a free-text query and parse the query as follows
-\begin{enumerate}
-\item tokenizes the query and considers logical and between tokens
-\item maps every token in the query that can be mapped to a MeSH term using Automatic Term Mapping (ATM) \cite{pubmed-atm}.
-\item sorts the results in a reverse chronological order.
-\end{enumerate}
+However, in the machine learning community tools and learning algorithms for ranking objects has been well developed \cite{yahoo-rank-challange}. For example, given a labeled dataset, i.e. having the rankings for every document, RankSVM \citep{svm-rank-j} trains a nonlinear model to predicts future ranking based on training set. RefMed \cite{refmed} uses RankSVM to learn a model for each query by incorporating user feedbacks as "training dataset labels" into training process. Unfortunately, like other ranking algorithms, RankSVM only works well when enough labeled training samples (user feedbacks) are provided to the learning algorithm, which is very unlikely in real world situations, to expect a user to rate all the search results.
 
+During past two decades a wide range of methods for creating recommender systems has been developed \cite{recommender-survey} to address the problem of unknwon user ratings for majority of results. For instance, collaborative filtering is a well-known algorithm for estimating user ratings for set of items based on their similarities to set of rated items \cite{cff-survey}.
 
-refmed \cite{refmed}
-
-RankSVM \citep{svm-rank-j}
-
-learning to rank \cite{yahoo-rank-challange}
-
-recommendation 
-\cite{recommender-survey}
-
-collaborative filtering
-\cite{cff-survey}
+Roughly speaking, Datarank implements, relevance ranking, query expansion and  relevance feedback using a Bayesian approach without requiring a training process.
 
 \section{Methodology} \label{sec:methodology}
 The DataRank algorithm is an online algorithm which updated its predictive model after receiving explicit and implicit feedbacks from users. Specifically, we resort to incorporate user feedbacks explicitly you giving an option to the user to rate the search results, and we interpret user clicks as implicit feedbacks. Therefore, for every new user, the algorithm works in an offline manner and after receiving user feedbacks it updates the model to present user specific rankings. In the following parts we first describe the features and then explain our DataRank model offline ranking and finally extend offline DataRank to online setting.
