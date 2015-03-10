@@ -130,13 +130,13 @@ In the standard statistical modelling procedures, the next step is to specify da
 \eeq
 where set operations are applied to the set representation of the binary vectors.
 
-However, this probability does not account for mismatches of terms in the query and features, and this leads to the phenomena that two queries whit the same number of matches but different number of mismatches have the same probability. To remedy this crucial problem, we can add the number of mismatches to the denominator, which is equivalent to condition on $\bfx \cup \bfq$
+However, this probability does not account for mismatches in partial matching of terms in the query and features of each dataset, and this leads to the phenomena that two queries whit the same number of matches but different number of mismatches have the same probability. To remedy this crucial problem, we can add the number of mismatches to the denominator, which is equivalent to condition on $\bfx \cup \bfq$
 \beq \label{eq:jaccard}
 \widehat{\pr}(\bfq | \bfx ) \propto \pr(\bfq | \bfx \cup \bfq)= \frac{|\bfq \cap \bfx|}{|\bfq \cup \bfx|}
 \eeq
 the value of \eqref{eq:jaccard} is known as Jaccard index or Tanimoto or Jaccard coefficient \cite{book:IR}. Thus for the query likelihood we have
 \beq \label{eq:jaccard}
-\widehat{\pr}(\bfq | \bfx ) = \frac{\widehat{\pr}(\bfq | \bfx ) }{\sum_{i=1}^n \widehat{\pr}(\bfq | \bfx_i ) }
+\pr(\bfq | \bfx ) = \frac{\widehat{\pr}(\bfq | \bfx ) }{\sum_{i=1}^n \widehat{\pr}(\bfq | \bfx_i ) }
 \eeq
 
 \paragraph{Dataset-prior.} Instead of learning a prior for datasets using empirical Bayesian methods, we simply chose to propose a reasonable subjective prior for the datasets. Basically, the better way to think about prior is to imagine the posterior distribution in a scenario where there is no evidence available, which is equivalent to say that what is the best ranking of datasets if do not have a query. There are many ways to answer this question, but a reasonable approach is to sort them based on their general popularity. Interestingly, we can quantitatively specify the popularity for the datasets by taking into account of how many citations they have in the training dataset, i.e., $\bfc=\bfone^TA$. More precisely, we can write prior as
@@ -154,33 +154,120 @@ where $\bfone$ is the vector of ones of corresponding dimension.
 \end{figure}
 So far, we have fully specified the prior and likelihood and hence posterior for the offline model and the ranking of datasets amounts to merely sort datasets decreasingly according to their posterior distribution.
 \subsection{Online Ranking}
-In this part we extend the offline-DataRank to the online setting by incorporating user feedback into ranking. For this porous, we propose a new model, Figure \ref{fig:pgm}-(b), which introduces \emph{incomplete} user ratings $\bfr\in \{0\cdots k \}^{m}$, \emph{completed} user rating $\bfR \in \Rbb_+^m$ and the dataset online-labels $\bfz$, where $k$ is the number of different state of ratings for each result in the ranking and 0 is used to denote unknown values in the ratings. As shown in the graphical model, the online-labels depend on user feedback but, (offline) dataset labels $\bfy$ do not.
+In this part we extend the offline-DataRank to the online setting by incorporating user feedback into ranking. For this porous, we propose a new model, Figure \ref{fig:pgm}-(b), which introduces \emph{incomplete} user ratings $\bfr\in \{0\cdots k \}^{m}$, and the dataset online-labels $\bfz$, where $k$ is the number of different state of ratings for each result in the ranking and 0 is used to denote unknown values in the ratings. Thus, in the ranking process, ratings $\bfr$ are initialized with zero value and at each epoch users rates the search results and updates the $\bfr_t$. As shown in the graphical model, the online-labels depend on user feedback but, (offline) dataset labels $\bfy$ do not. 
 
-The ratings $\bfr$ are initialized with zero value and at each epoch users rates the search results and updates the $\bfr_t$. Similar to offline method, the task is to compute the posterior
+ Similar to offline method, the task is to compute the posterior
 \beq \label{eq:online-posterior}
 \pr (\bfz | \bfr, \bfy, \bfc, \bfq, \bfx)  \propto  \pr (\bfz |\bfr) \pr (\bfy |\bfc,\bfq, \bfx)
 \eeq
 where the factorization induced by the graphical model Figure \ref{fig:pgm}-(b) and in this model evidence is incomplete user rating $\bfr$. Interestingly the offline posterior $\pr (\bfy |\bfc,\bfq, \bfx)$ can be regarded as prior in this model, which implies that without any evidence, user ratings, the online posterior is exactly equal to its prior, i.e., offline posterior, which makes a perfect sense.
 
-Specifying the likelihood $\pr (\bfz |\bfr)$ amounts to determining unknown values in the rating vectors and then normalize it.
-We use collaborative filtering \cite{CF-survey} to estimate unknown values of user ratings for the datasets that has not been rated yet, based on similarity of rated datasets  a vector completion method, to use the sparse and incomplete past ratings to fill the unknown values based on similarity of datasets to the unrated datasets and the all the legitimate ratings. Thus, the key step is to define a similarity measure between datasets. 
-Regarding, the binary MeSH representation of datasets, we opt to use Tanimoto kernel \cite{t-kernel} between datasets for measuring similarity between datasets
+However, the ratings $\bfr$ is incomplete, i.e. contain zero values, and in order to specify the likelihood $\pr (\bfz |\bfr)$ we first need to estimate the unknown values of user ratings. Once we estimate all the unknown values in the user rating vector $\bfr$  we can readily  compute the likelihood $\pr (\bfz |\bfr)$ by normalizing $\bfr$
+
+We use collaborative filtering \cite{CF-survey} to estimate unknown values of user ratings for the datasets that has not been rated yet. Collaborative filtering methods generally work by constructing a similarity matrix between items (dataset), and defining a method for finding a set of neighbours of each item, and then computes the rating of undated items as weighted linear combination its rated neighbours, where the weights are proportional to similarity between items.
+
+Since the rating vectors is extremely sparse we choose to define the method for finding neighbours to return all the rated items, to use all the user rating information. Thus, the key step remains to perform collaborative filtering is to define a similarity measure between datasets. Regarding, the binary MeSH representation of datasets, we opt to use Tanimoto kernel \cite{t-kernel} between datasets for measuring similarity between datasets
 \beq
 K_{i,j} = K(\bfx_i,\bfx_j) =  \frac{\bfk_\cap(\bfx_i,\bfx_j)}{\bfk_\cap(\bfx_i,\bfx_i) + \bfk_\cap(\bfx_j,\bfx_j) - \bfk_\cap(\bfx_i,\bfx_j)}
 \eeq
 where $K$ is a $m \times m$ symmetric positive definite matrix, $\bfk_\cap(\bfx_i,\bfx_j)=\frac{|\phi(\bfx_i) \cap \phi(\bfx_j) |}{|\phi(\bfx_i) \cup \phi(\bfx_j)| }$ is intersection kernel \cite{i-kernel} between $\bfx_i$ and $\bfx_j$, and $\phi(\cdot)$ is a general nonlinear feature function. 
 
-Having a similarity matrix between datasets, using collaborative filtering we can readily fill the unknown values in the rating vector, and compute the likelihood
+Having a similarity matrix between datasets, using collaborative filtering we can readily fill the unknown values in the completed rating vector $\bfR$ 
+\beq
+\bfR_i= 
+\begin{cases} 
+\bfr_i,  &\bfr_i \neq 0  \\
+\bfr^TK_i , &\bfr_i = 0 \end{cases} 
+\eeq
+where $K_i$ is the $i^{th}$ column of the kernel matrix. Having computed the completed rating vector, to compute the likelihood, we only need to normalize $\bfR$
 \beq \label{eq:online-likelihood}
-\pr(\bfz | \bfr) = \frac{K \bfr}{\bfone^T K \bfr}
+\pr(\bfz | \bfr) = \frac{\bfR}{\bfone^T \bfR}
 \eeq
 Using \eqref{eq:jaccard} and \eqref{eq:online-likelihood} we can fully specify the online prediction posterior \eqref{eq:online-posterior} and therefore, online ranking for the DataRank algorithm.
 
 \section{Experimental Study} \label{sec:Experiments}
 \subsection{Implementation}
-(Mike)
+DataEngine is deployed on an Ubuntu 13.04 system with Intel Xeon X5650 2.67GHz and 4 GB RAM. Nginx 1.4.6 is used for static request and django 1.7.4 is used for dynamic request. uwsgi is used as an application server hosting django models, which is also used as an interconnector between nginx and django. Nginx is chosen for a consideration of future high traffic. A django/python combination is more extensible for future recommendation algorithm research with assistance of numpy and scipy.
+
+%    \begin{figure}[htbp]
+%        \centering
+%        \includegraphics[width=0.95\linewidth]{imgs/Components.png}
+%        \caption{Components Relation}
+%        \label{fig:components_relation}
+%    \end{figure}
+
+    \subsubsection{System Architecture} % (fold)
+    \label{ssub:system_architecture}
+        A brief system architecture is shown below. The abstract architecture is a standard MVC model.
+    
+         \begin{figure}[htbp]
+             \centering
+             \includegraphics[width=0.95\linewidth]{architecture.png}
+             \caption{System Components}
+             \label{fig:system_components}
+         \end{figure}
+
+        All user interaction with UI is passed to interface layer for futuer response. All static request is passed to nginx and will be responsed immediately. Dynamic request is passed to model layer. After processing and computation, a response will be given back to user via same path.
+
+        \begin{figure}[htbp]
+            \centering
+            \includegraphics[width=0.95\linewidth]{workflow.png}
+            \caption{}
+            \label{fig:Work Flow}
+        \end{figure}
+
+        At system entry, there is a login management component. User could register, login or stay anonymous. When user either registered or logined, this user will be given a unique identifier. For identified user, all history action could be retrieved for recommendation and all new actions will be recorded as preferences. A search component works at next step. User insert one or a combination of keywords, a list of datasets will be shown on display via an offline ranking algorithm. Keywords will be passed to backend and be processed by a set of function and algorithms, and then a list of datasets is given with a keywords related order. The algorithm will be introduced on section \ref{sec:algorithm}.
+
+        Display component plays as an important connector among different models and functions. User gives rates and comments on this step. When new user related information is added, a refresh component is activated. It will pass all new infomation to backend, and a backend online learning algorithm will collect all user historic and current preferrences and then give a new ranking based on updated information. This infomation will be shown on display component.
+
+    % subsubsection system_architecture (end)
+
+    \subsubsection{Searching Pattern} % (fold)
+    \label{ssub:searching_pattern}
+
+        Searching bar is the first function component faced by user. It could support several basic pattern. Current preffered keywords are MeSH terms. However there are punctuations included in existing MeSH terms text. We choose semicolon as splitter. When a string of keywords is passed to backend component, a grammar parser component is activated. it first changes keywords to lower letters, splits keywords by semicolons, and then remove travial characters for each keyword. A set of cleaned keywords will be passed to next model for further processing.
+
+        Now, dataset specific searching is supported. User may have a destination data source. Thus supporting a data resource fixed searching pattern is necessary. We use an at sign (@) on the end of keywords, and dataset name is given after it. This dataset name is stored, and all future refreshing will only occur under this scale. A simple example is (DNA;Genes@GeneBank).
+
+    % subsubsection searching_pattern (end)
+
+    \subsubsection{Refresh} % (fold)
+    \label{ssub:efresh}
+
+        Refreshing is one of the most important feature in this system. Refreshing is majorly session based. A session is define as the a period of actions with one fixed query. If a new query is requested, a new session will be created. In a session, user could give ratings and update preferences unlimitedly. Everytime, when new information is given, an update of recommendation would be activated. A standard session work flow is: a user input keywords, and a list of datasets are given. After considering, user gives ratings to some of them and trigger refresh component. Relearning user preferences will be executed and a list of new ordered data will be given.
+    
+    % subsubsection refresh (end)
+
+    \subsubsection{Ratings and Comments} % (fold)
+    \label{ssub:ratings_and_comments}
+        
+        Ratings and comments are two important feature for online learning, which is introduced on section \ref{sec:algorithm}. As users may change their ideas frequently, ratings are stored on browser session, which provide better security than traditional cookies. Those ratings will be passed to server side and stored when refresh action is triggered. Each rating is a pair of dataset ID and rating score. Comments are also passed to server side with dataset id, and user related information will be added later. All stored ratings and comments include time information and user information and even keywords. All this information could be used for future ranking algorithm development.
+
+    % subsubsection ratings_and_comments (end)
+
+    \subsubsection{Assistant Information} % (fold)
+    \label{ssub:assistant_information}
+    
+        In order to help user evaluate and understanding datasets orders better, we offer several parameters, such as posterior likelihood value (online ranking results) and raw prior probability. Counts of citations are also provided. All these statistics could be used as an compliment of metadata in order to have a better understanding of datasets.
 \subsection{Experiments}
-(Xiaoqian)
+We consider tree set of experiments to evaluate
+\begin{enumerate}
+\item {\bf Convergence} in this experiment user searches for a query, e.g. "DNA", and for $t=1\cdots T$ enters/updates ratings  $\bfr^{(t)}$ for \emph{all} the top 20 results. By defining $\bfr^{(0)}= {\mathbf 0}$, for $t=1\cdots T$ we compute
+\beq
+\kappa^{(t)}=\kappa(\bfr^{(t-1)} , \bfr^{(t)})
+\eeq
+we show that $\kappa^{(t)}$ monotonously converges to 1, i.e., user can not improve the results any more,.
+\item {\bf Improvement} The setting of this experiment is exactly the same as previous, so the statistics can be concurrently recorded. in this experiment for $t=1\cdots T$ we compute average rating 
+\beq
+\bbfr^{(t)}=\frac{\sum_i \bfr_i^{(t)}}{m}
+\eeq
+we will show that the average rating is a monotone non-decreasing, i.e., user finds ranking results more useful.
+\item {\bf Specialization} in this experiment we show that DataRank is able to present user special results. For this case user A and B search for the same query, e.g. "Mice", and $t=1\cdots T$ we compute
+\beq
+\kappa_{A,B}^{(t)}=\kappa(\bfr_A^{(t)} , \bfr_B^{(t)})
+\eeq
+we will show that this curve is not increasing, users tend to have disagreement, in personalized ranking.
+\end{enumerate}
 \section{Conclusions} \label{sec:conclusions}
 (Xiaoqian)
 

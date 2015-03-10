@@ -35,9 +35,9 @@ def merge_datasets(datasets,outpath):
                 for line in filein:
                     print >> fileout , line ,
                     N+=1
-    print 'Merging {} datasets to a dataset with {} samples is completed!'.format(len(datasets), N)
+    print 'Merging {} datasets to A dataset with {} samples is completed!'.format(len(datasets), N)
 
-def convert_wei_files_to_libsvm(path='/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data_matrix_by_year_root_or_parent_nodes/', level=1,years=range(2004,2015), labels_path = '/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data6/label/'):
+def convert_wei_tsv_files_to_libsvm(path='/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data_matrix_by_year_root_or_parent_nodes/', level=1,years=range(2004,2015), labels_path = '/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data6/label/'):
     Y=np.array([]).reshape(0,2)
     if labels_path is not None:
         
@@ -77,6 +77,7 @@ def convert_wei_files_to_libsvm(path='/home/arya/Dropbox/multi-label_prediction/
     
 
 
+
 def learn_svm(ds='/home/arya/tools/libsvm/heart_scale', C=10, G=1, cv=0, runnrame='' , linear=True, exe='/home/arya/tools/libsvm/svm-train', out='/home/arya/out/model'):
     cmd='{} -c {} -t {} {} {} {}.{} '.format(exe, C, ( '{} -g {}'.format(2,1), 0)[linear], ('' ,'-v {}'.format(cv))[cv>0], ds, out,runnrame)
     P= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -90,8 +91,12 @@ def get_year_str(y):
         name='2004-2014'    
     return name
     
-def run_multiclass():
-    datasets =convert_wei_files_to_libsvm()
+def run_multiclass(binary_features=False):
+    if binary_features:
+        datasets =convert_wei_tsv_files_to_libsvm()
+    else:
+        datasets =convert_wei_pkl_files_to_libsvm()
+    
     for (ds,y) in zip(datasets,range(2004,2004+len(datasets))):
         learn_svm(ds, runnrame=get_year_str(y))
 
@@ -102,15 +107,17 @@ def smooth(x,y,n=300):
     y_smooth=spline(x, y, x_smooth)
     return x_smooth,y_smooth
 
-def plot_curve(y,do_smooth=True):
+def plot_curve(y,do_smooth=True,color='k'):
     x=np.array(range(len(y)))
     if do_smooth:
         x,y=smooth(x, y)
-    P.plot(x,y,linewidth=2)
+    P.plot(x,y,linewidth=2,color=color)
 
-def plot_trend(yprob, normalization=None,years=range(2004,2015),feature_idx=None, featre_name=None):
+def plot_trend(yprob, W, normalization=None,years=range(2004,2015),feature_idx=None, featre_name=None):
+    
+    
     do_smooth=True
-    if feature_idx is None:
+    if W is None:
         if normalization is not None:
             if not normalization:
                 title='Normalized by Repository '
@@ -121,8 +128,8 @@ def plot_trend(yprob, normalization=None,years=range(2004,2015),feature_idx=None
         else:
             title='Counts of Each Repository'
         
-        plot_curve(yprob[:,0], do_smooth)
-        plot_curve(yprob[:,1], do_smooth)
+        plot_curve(yprob[:,0], do_smooth,color='b')
+        plot_curve(yprob[:,1], do_smooth,color='r')
         P.title(title)
         P.legend(['GenBank','GEO'],loc='upper left') #0 is Genbank and 1 is GEO
     else:
@@ -133,11 +140,14 @@ def plot_trend(yprob, normalization=None,years=range(2004,2015),feature_idx=None
                 title='Normalized by Year'
         else:
             title='Weights of Each Feature'
-        plot_curve(yprob[:,feature_idx], do_smooth)
+        yprob = yprob  / yprob.sum(0)
+        plot_curve(W[:,feature_idx]/float(sum(W[:,feature_idx])), do_smooth,color='k')
+        plot_curve(yprob[:,0], do_smooth,color='b')
+        plot_curve(yprob[:,1], do_smooth,color='r')
         P.title(title)
         if featre_name is None:
             featre_name= 'Mesh'+str(feature_idx)
-        P.legend([featre_name],loc='upper left') #0 is Genbank and 1 is GEO
+        P.legend([featre_name, 'GenBank','GEO'],loc='upper left') #0 is Genbank and 1 is GEO
         
     P.xticks(range(len(years)), map(str,years), rotation='vertical')
     P.grid()
@@ -146,31 +156,33 @@ def plot_trend(yprob, normalization=None,years=range(2004,2015),feature_idx=None
 
 def plot_trends(path='/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data6/label/', years=range(2004,2015),W=None,idx=None):
     fig=P.figure(figsize=(26, 8), dpi=80)
-    if W is None: # plot classes
-        W=[]
-        for y in years:
-            dataset='{}{}_label.txt'.format(path,y)
-            
-            with open(dataset) as f:
-                lines=f.readlines()
-                y=np.array(map(lambda x: x.split()[-1].strip(), lines))
-                W+=[np.histogram(y, range(3))[0]]
-        W = np.array(W, dtype=float)
+    yprob=[]
+    for y in years:
+        dataset='{}{}_label.txt'.format(path,y)
+        
+        with open(dataset) as f:
+            lines=f.readlines()
+            y=np.array(map(lambda x: x.split()[-1].strip(), lines))
+            yprob+=[np.histogram(y, range(3))[0]]
+    yprob = np.array(yprob, dtype=float)
 
     
     P.subplot(1,3,1)
-    plot_trend(W, feature_idx=idx)
+    plot_trend(yprob,W, feature_idx=idx)
     P.subplot(1,3,2)
-    plot_trend(W,0, feature_idx=idx)
+    plot_trend(yprob,W, normalization=0, feature_idx=idx)
     P.subplot(1,3,3)
-    plot_trend(W,1, feature_idx=idx)
+    plot_trend(yprob,W,normalization=1, feature_idx=idx)
 #     P.show()
-    return fig
+    return fig , yprob
     
             
-def save_data(Data,path):
+def save_data_pkl(Data,path):
     with open(path, 'w') as f:
         pickle.dump(Data, f)
+
+def load_data_plk(path):
+    return pickle.load(file(path))
         
 def get_alpha_and_SV(path):
     with open(path) as f:
@@ -183,7 +195,7 @@ def get_alpha_and_SV(path):
         X=map(lambda x:eval( '{' + ','.join(x.split()[1:])+ '}'),lines)
     return alpha, X
         
-def get_fearure_weights(d=103, years=range(2004,2017), normalize=False):
+def get_fearure_weights(yprob, d=103, years=range(2004,2017), normalize=False, binary_features=False, top10_type='sum', reg=1e-3):
     from svmutil import svm_load_model
     W=np.array([]).reshape(0,d)
     periods=[]  
@@ -202,23 +214,43 @@ def get_fearure_weights(d=103, years=range(2004,2017), normalize=False):
         W=np.append(W,alpha.dot(X)[None,:],axis=0)
     np.set_printoptions(linewidth='1000', precision=3, edgeitems=55, suppress=True)
     
+    W=W+reg
     if normalize:
         W=W/ W.sum(1)[:,None]
-    print ('','Normalized')[normalize], 'Feature Weights:'
+    print ('UnNormalized','Normalized')[normalize], 'Feature Weights:'
     print W
     
     
-    sumW= W.sum(0)
-    indices = range(len(sumW))
-    indices.sort(lambda x,y: -cmp(sumW[x], sumW[y]))
-    top10=indices[:10]
+    if top10_type=='sum':
+        sumW= W.sum(0)
+        indices = range(len(sumW))
+        indices.sort(lambda x,y: -cmp(sumW[x], sumW[y]))
+        top10=indices[:10]
+    elif top10_type =='genbank':
+        yprob = yprob  / yprob.sum(0)
+        err0 =  abs(W[:11,:]-yprob[:,0][:,None]).sum(0)
+        indices = range(len(err0))
+        indices.sort(lambda x,y: -cmp(err0[x], err0[y]))
+        top10=indices[:10]
+    elif top10_type=='geo':
+        yprob = yprob  / yprob.sum(0)
+        err1 =  abs(W[:11,:]-yprob[:,1][:,None]).sum(0)
+        indices = range(len(err1))
+        indices.sort(lambda x,y: -cmp(err1[x], err1[y]))
+        top10=indices[:10]
+    else:
+        print top10_type , 'not found'
+        exit(1)
+    top10=sorted(top10)
+    print top10, top10_type
+#     exit(1)
     info="""
-    W: t x d matrix of weights which each line contains a weight correponding to time t (periods[t]
+    W: t x d matrix of weights which each line contains A weight correponding to time t (periods[t]
     periods: t x 1 string list which each element contains the period, e.g. 2004-2008
-    top10: Top 10 features which has a larger sum over all the periods 
+    top10: Top 10 features which has A larger sum over all the periods 
     """
     Data={'W':W, 'periods':periods, 'top10':top10, 'info':info}
-    save_data(Data, '/home/arya/out/trends{}.pkl'.format(('','_normalized')[normalize]))
+    save_data_pkl(Data, '/home/arya/out/trends{}{}.pkl'.format(('_unnormalized','_normalized')[normalize],('_integer','_binary')[binary_features]))
     
     return W,periods, top10
 
@@ -227,7 +259,7 @@ def run_and_plot_trends():
   
     fig=plot_trends()
     pdf.savefig(fig)
-    convert_wei_files_to_libsvm()
+    convert_wei_tsv_files_to_libsvm()
     run_multiclass()
     W,names, top10= get_fearure_weights()
     for idx in top10:
@@ -237,20 +269,126 @@ def run_and_plot_trends():
     pdf.close()
 
 
+def get_kappa(A=None,B=None):
+    from pandas import crosstab
+    import numpy as np
+    A=np.array(A)
+    B=np.array(B)
+    if A is None or B is None:
+        k=5
+        n=30
+        A=np.array([np.random.randint(k)+1 for _ in range(n)])
+        B=np.array([np.random.randint(k)+1 for _ in range(n)])
+        ## Wikipedia Example 1
+        A= np.append(np.zeros(25, dtype=int),np.ones(25, dtype=int))
+        B= np.roll(np.append(np.zeros(30, dtype=int),np.ones(20, dtype=int)), 5)
+        
+#         ## Wikipedia Example 2
+#         A= np.append(np.zeros(60, dtype=int),np.ones(40, dtype=int))
+#         B= np.roll(np.append(np.zeros(70, dtype=int),np.ones(30, dtype=int)), 15)
+#         
+#         ## Wikipedia Example 3
+#         A= np.append(np.zeros(60, dtype=int),np.ones(40, dtype=int))
+#         B= np.roll(np.append(np.zeros(30, dtype=int),np.ones(70, dtype=int)), -5)
+        
+        
+#         print 'A',A
+#         print 'B', B
+    
+    T=crosstab(A,B,rownames='A',colnames='B').as_matrix()
+    print T
+    b= T.sum(0)
+    a= T.sum(1)
+    p=T.diagonal().sum()/float(T.sum())
+    b=b/float(b.sum())
+    a=a/float(a.sum())
+    e= sum(a*b)
+#     e=sum((T.diagonal()/float(T.sum()))**2) ## xiaoqian's xls file 
+    
+    kappa= (p-e)/(1-e)
+    print 'kappa:', kappa
+    return kappa
+
+def get_ymap(path='/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data_matrix_by_year_root_or_parent_nodes/', level=1,years=range(2004,2015), labels_path = '/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data6/label/'):
+    Y=np.array([]).reshape(0,2)
+        
+    for y in years:
+        dataset='{}{}_label.txt'.format(labels_path, y)
+        with open(dataset) as f:
+            lines=f.readlines()
+            Y=np.append(Y,np.array(map(lambda x: [int(x.split()[0].strip()), int(x.split()[1].strip()) ], lines)), axis=0)
+    Y = {int(key): int(value) for (key, value) in Y}.values()
+    return np.array(Y)
+
+def convert_matrix_to_libsvm_file(X,Y,path):
+    with open(path,'w') as f:
+        for x,y in zip(X,Y):
+            line=str(y)
+            for i in range(len(x)):
+                if x[i]:
+                    line+= ' {}:{}'.format(i+1,x[i])
+            print >> f , line
+                
+
+
+def convert_wei_pkl_files_to_libsvm(path='/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data7/',years=range(2004,2015)):
+    datasets=[]
+    X_all= load_data_plk(path+ 'feature.pkl')[:-1,:]
+    y_all= load_data_plk(path+ 'label.pkl')[:-1]
+    lenghts= map(lambda x: int(x.strip().split()[-1]), file(path+ 'offset.txt').readlines()[1:])
+    offset= np.append([0],np.cumsum(lenghts)[:-1])
+    ymap=get_ymap()
+    for (l,s, year) in zip(lenghts,offset, years):
+        X=X_all[s:s+l,:]
+        y=ymap[y_all[s:s+l]]
+        ds='{}data_{}.libsvm'.format(path, year)
+        convert_matrix_to_libsvm_file(X,y,ds)
+        datasets.append(ds)
+    
+    frm=2004
+    to=2009
+    toidx=years.index(to)+1
+    frmidx=years.index(frm)
+    ds='{}data_{}to{}.libsvm'.format(path,years[frmidx],years[toidx-1])
+    s=offset[frmidx]
+    l=offset[toidx]
+    X=X_all[s:s+l,:]
+    y=ymap[y_all[s:s+l]]
+    convert_matrix_to_libsvm_file(X,y,ds)
+    datasets.append(ds)
+    
+    frm=2004
+    to=2014
+    toidx=years.index(to)+1
+    frmidx=years.index(frm)
+    ds='{}data_{}to{}.libsvm'.format(path,years[frmidx],years[toidx-1])
+    s=offset[frmidx]
+    l=sum(lenghts[:toidx])
+    X=X_all[s:s+l,:]
+    y=ymap[y_all[s:s+l]]
+    convert_matrix_to_libsvm_file(X,y,ds)
+    datasets.append(ds)
+    return datasets
+
 if __name__ == '__main__':
-    normalize=  False
-    pdf = PdfPages('/home/arya/out/trends{}.pdf'.format(('','_normalized')[normalize]))
-    fig=plot_trends()
-    pdf.savefig(fig)
-    convert_wei_files_to_libsvm()
-    run_multiclass()
-    W,names, top10= get_fearure_weights(normalize=normalize)
-    for idx in top10:
-        fig= plot_trends(W=W[:11], idx=idx)
+    normalize=     True
+    binary_features=   not False
+    for i in range(3):
+        top10_type=['sum', 'genbank','geo'][i]
+        pdf = PdfPages('/home/arya/out/trends{}{}_{}.pdf'.format(('_unnormalized','_normalized')[normalize],('_integer','_binary')[binary_features], top10_type))
+        fig,yprob=plot_trends()
         pdf.savefig(fig)
-   
-    pdf.close()
+        run_multiclass(binary_features=binary_features)
+        W,names, top10= get_fearure_weights(yprob, normalize=normalize,binary_features=binary_features,top10_type=top10_type)
+        for idx in top10:
+            fig, _= plot_trends(W=W[:11], idx=idx)
+            pdf.savefig(fig)
+         
+        pdf.close()
     print 'Done!'
+
+
+
 
 
 
