@@ -1,11 +1,12 @@
 import subprocess
 import numpy as np
 import pickle
-import pylab as P
+import pylab as plt
 from numpy import dtype
 from matplotlib.backends.backend_pdf import PdfPages
 from cupshelpers.ppds import normalize
-
+from lxml.html.builder import LEGEND
+np.set_printoptions(linewidth='1000', precision=2, suppress=True)
 
 def convert_txt_to_libsvm(path,y):
     with open(path) as filein, open(path.replace('.txt','.libsvm'), "w") as fileout:
@@ -80,8 +81,8 @@ def convert_wei_tsv_files_to_libsvm(path='/home/arya/Dropbox/multi-label_predict
 
 def learn_svm(ds='/home/arya/tools/libsvm/heart_scale', C=10, G=1, cv=0, runnrame='' , linear=True, exe='/home/arya/tools/libsvm/svm-train', out='/home/arya/out/model'):
     cmd='{} -c {} -t {} {} {} {}.{} '.format(exe, C, ( '{} -g {}'.format(2,1), 0)[linear], ('' ,'-v {}'.format(cv))[cv>0], ds, out,runnrame)
-    P= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    print runnrame,':', cv, 'Fold', P.stdout.readlines()[-1].strip() 
+    proc= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    print runnrame,':', cv, 'Fold', proc.stdout.readlines()[-1].strip() 
     
 def get_year_str(y):
     name=str(y)
@@ -111,7 +112,7 @@ def plot_curve(y,do_smooth=True,color='k'):
     x=np.array(range(len(y)))
     if do_smooth:
         x,y=smooth(x, y)
-    P.plot(x,y,linewidth=2,color=color)
+    plt.plot(x,y,linewidth=2,color=color)
 
 def plot_trend(yprob, W, normalization=None,years=range(2004,2015),feature_idx=None, feature_name=None):
     
@@ -130,8 +131,8 @@ def plot_trend(yprob, W, normalization=None,years=range(2004,2015),feature_idx=N
         
         plot_curve(yprob[:,0], do_smooth,color='b')
         plot_curve(yprob[:,1], do_smooth,color='r')
-        P.title(title)
-        P.legend(['GenBank','GEO'],loc='upper left') #0 is Genbank and 1 is GEO
+        plt.title(title)
+        plt.legend(['GenBank','GEO'],loc='upper left') #0 is Genbank and 1 is GEO
     else:
         if normalization is not None:
             if not normalization:
@@ -144,14 +145,14 @@ def plot_trend(yprob, W, normalization=None,years=range(2004,2015),feature_idx=N
         plot_curve(W[:,feature_idx]/float(sum(W[:,feature_idx])), do_smooth,color='k')
         plot_curve(yprob[:,0], do_smooth,color='b')
         plot_curve(yprob[:,1], do_smooth,color='r')
-        P.title(title)
+        plt.title(title)
 #         if featre_name is None:
 #             feature_name= feature_names[feature_idx]
 #             featre_name= 'Mesh'+str(feature_idx)
-        P.legend([feature_name, 'GenBank','GEO'],loc='upper left') #0 is Genbank and 1 is GEO
+        plt.legend([feature_name, 'GenBank','GEO'],loc='upper left') #0 is Genbank and 1 is GEO
         
-    P.xticks(range(len(years)), map(str,years), rotation='vertical')
-    P.grid()
+    plt.xticks(range(len(years)), map(str,years), rotation='vertical')
+    plt.grid()
      
     
 
@@ -168,17 +169,17 @@ def plot_trends(path='/home/arya/Dropbox/multi-label_prediction/experiments/prel
     yprob = np.array(yprob, dtype=float)
 
     if W is None:
-        fig=P.figure(figsize=(26, 8), dpi=80)
-        P.subplot(1,3,1)
+        fig=plt.figure(figsize=(26, 8), dpi=80)
+        plt.subplot(1,3,1)
         plot_trend(yprob,W, feature_idx=idx)
-        P.subplot(1,3,2)
+        plt.subplot(1,3,2)
         plot_trend(yprob,W, normalization=0, feature_idx=idx)
-        P.subplot(1,3,3)
+        plt.subplot(1,3,3)
         plot_trend(yprob,W,normalization=1, feature_idx=idx)
     else:
-        fig=P.figure(figsize=(10, 8), dpi=80)
+        fig=plt.figure(figsize=(10, 8), dpi=80)
         plot_trend(yprob,W, normalization=0, feature_idx=idx, feature_name=feature_name)
-#     P.show()
+#     plt.show()
     return fig , yprob
     
             
@@ -277,10 +278,9 @@ def run_and_plot_trends():
 
 
 def get_kappa(A=None,B=None):
-    from pandas import crosstab
+    import pandas as pd
     import numpy as np
-    A=np.array(A)
-    B=np.array(B)
+    
     if A is None or B is None:
         k=5
         n=30
@@ -301,19 +301,36 @@ def get_kappa(A=None,B=None):
         
 #         print 'A',A
 #         print 'B', B
-    
-    T=crosstab(A,B,rownames='A',colnames='B').as_matrix()
-    print T
+#         colnames=['0', '1', '2', '3', '4', '5']
+        T=pd.crosstab(A,B,rownames='A',colnames='B').as_matrix()
+    else:
+        A=np.array(A)
+        B=np.array(B)
+        T=pd.crosstab(A,B,rownames='A',colnames='B')#.as_matrix()\
+        
+        vals=['0', '1', '2', '3', '4', '5']
+        
+        for v in vals:
+            try:
+                T[v]
+            except :
+                T[v] = pd.Series(np.zeros(len(list(T.index))), index=T.index)
+        for v in vals:
+            try:
+                list(T.index).index(v)
+            except :
+                T.loc[v] = np.zeros(6) 
+        T= T.sort()
+        T= T.reindex_axis(sorted(T.columns), axis=1).as_matrix()
     b= T.sum(0)
     a= T.sum(1)
     p=T.diagonal().sum()/float(T.sum())
     b=b/float(b.sum())
     a=a/float(a.sum())
     e= sum(a*b)
-#     e=sum((T.diagonal()/float(T.sum()))**2) ## xiaoqian's xls file 
-    
-    kappa= (p-e)/(1-e)
-    print 'kappa:', kappa
+#     e=sum((T.diagonal()/float(T.sum()))**2) ## xiaoqian's xls file
+    kappa= max(1e-200,(p-e)/(1-e))
+#     return np.log(kappa)
     return kappa
 
 def get_ymap(path='/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data_matrix_by_year_root_or_parent_nodes/', level=1,years=range(2004,2015), labels_path = '/home/arya/Dropbox/multi-label_prediction/experiments/preliminary/data6/label/'):
@@ -381,8 +398,8 @@ def get_feature_names(binary_features, path='/home/arya/Dropbox/multi-label_pred
         return map(lambda x: str(x[0]),pickle.load(file('{}mesh_vocab_{}.pkl'.format(path, (102,103)[binary_features]))))
     else:
         return map(lambda x: str(x),pickle.load(file('{}mesh_vocab_{}.pkl'.format(path, (102,103)[binary_features]))))
-    
-if __name__ == '__main__':
+
+def run_and_plot_all_curves():
     normalize=     True
     binary_features=  not  False
     for i in range(1):
@@ -396,14 +413,162 @@ if __name__ == '__main__':
         for idx in top10:
             fig, _= plot_trends(W=W[:11], idx=idx, feature_name=feature_names[idx])
             pdf.savefig(fig)
-            P.close(fig)
+            plt.close(fig)
          
         pdf.close()
     print 'Done!'
 
+def read_ratings(path):
+    r= map(eval,file(path).readlines())
+    r.append(['0' for _ in range(len(r[0]))])
+    return r[-1:] + r[:-1]
 
+def plot_trend(trend):
+#     plt.plot(np.log(abs(np.array(trend))), linewidth=2)
+    plt.plot(trend, linewidth=2)
+#     plt.xlim()
+    plt.grid()
+    plt.show()
+def plot_temporal_kappa_trend():
+    path='/home/arya/amir'
+    r = read_ratings(path)
+    trend=[]
+    for i in range(1,len(r)):
+        trend.append(  get_kappa(r[i-1], r[i]))
+    trend = filter(lambda x: x!=1, trend)
+    trend.append(1)
+    plot_trend(trend)  
+    print len(trend)
 
+def get_loss_of_session(session , path='/home/arya/experData/'):
+    path+=session
+    UR=map(lambda x: np.array(map(float, eval(x))),file(path+'vectors').readlines())
+    PR=map(lambda x: np.array(map(float,eval(x))),file(path+'predRatings').readlines())
+    UR=UR[:min(len(UR),22)]
+    PR=UR[:min(len(PR),22)]
+    loss=[]
+    for ur,pr in zip(UR[1:],PR[:-1]):
+        idx = np.where(ur)[0]
+        loss.append(np.mean(abs(ur[idx]- pr[idx])))
+    return np.array(loss)
+def plot_loss(Losses,regret=False, Unames=None, path='/home/arya/workspace/biocaddie/ranking/paper/'):
+    name='Loss'
+    for loss in Losses:
+        if regret:
+            closs=np.cumsum(loss)
+            loss =  closs/ np.array(range(1,len(closs)+1))
+            name='Regret'
+        plt.plot(range(len(loss)),loss,linewidth=2)
+    
+    plt.rc('font', **{'family': 'serif', 'size':24, 'serif': ['Computer Modern']})
+    plt.rc('text', usetex=True)
+    plt.xlabel('Iteration',fontsize=56)
+    plt.title(name+' of Experiments',fontsize=56, y=1.01)
+    plt.ylabel(name,fontsize=56)
+#     plt.xlim([-0.5,lim])
+#     plt.ylim([-0.1,max(loss)+1])
+    plt.grid()
+    plt.legend(['Subject 1', 'Subject 2', 'Subject 3','Subject 4','Subject 5'])
+#     plt.legend(Unames)
+    plt.savefig('{}{}.png'.format(path,name))
+    plt.xlim([-0.5,plt.xlim()[1]+1])
+    plt.ylim([-0.5,plt.ylim()[1]+1])
+    plt.show()
+    
 
+def plot_loss_sessions(sessions, path='/home/arya/workspace/biocaddie/ranking/paper/'):
+    Loss=[]
+    Unames=[]
+    fig=plt.figure(figsize=(12, 10), dpi=80)
+    for session in sessions:
+        Loss.append(get_loss_of_session(session))
+        Unames.append(get_name_from_session(session))
+    
+    plot_loss(Loss, Unames=Unames)
+    
+    fig=plt.figure(figsize=(12, 10), dpi=80)
+    plot_loss(Loss, regret=True, Unames=Unames)
 
+def get_rating_vector(session , path='/home/arya/experData/'):
+    path+=session
+    R= map(lambda x: np.array(map(str, eval(x))),file(path+'vectors').readlines())
+    return [R[i] for i in range(len(R)-1) if not (R[i]==R[i+1]).all() ]
 
+def get_name_from_session(session):
+    for i in range(len(session)):
+        if session[i].isdigit():
+            break
+    return session[:i].capitalize()
+        
+def plot_dis_sessions(sessions):
+    fig=plt.figure(figsize=(12, 10), dpi=80)
+    leg=[]
+    sum=np.zeros(22)
+    count =np.zeros(22)
+    for i in range(0,len(sessions)-1):
+        for j in range(i+1,len(sessions)):
+            userA= get_rating_vector(sessions[i])
+            userB= get_rating_vector(sessions[j])
+            if len(userA)<len(userB):
+                userB=userB[:len(userA)]
+            elif len(userA)>len(userB):
+                userA=userA[:len(userB)]
+#             leg.append( ' vs '.join( [ get_name_from_session(sessions[i])  , get_name_from_session(sessions[j])]))
+            dis=[get_kappa(A, B) for A,B in zip(userA, userB)]
+            dis.append(0)
+            dis=dis[-1:] + dis[:-1]
+            sum[:len(dis)] += np.array(dis)
+            count[:len(dis)] +=1
+    idx= np.where(count)
+    meandis= sum[idx]/count[idx]
+    plt.plot(range(len(meandis)),meandis,linewidth=2)
+    plt.rc('font', **{'family': 'serif', 'size':20, 'serif': ['Computer Modern']})
+#     plt.rc('text', usetex=True)
+    plt.xlabel('Iteration',fontsize=30)
+    plt.title('Avg Pairwise Disagreement between Subjects ',fontsize=30, y=1.02)
+    plt.ylabel('$\kappa$',fontsize=30)
+    plt.grid()
+    plt.savefig(path+'dis.png')
+    plt.xlim([-0.5,plt.xlim()[1]+1])
+    plt.ylim([-0.1,plt.ylim()[1]+1])
+    plt.legend(['Avg Pairwise Disagreement'])
+    
+    plt.show()
+    
+if __name__ == '__main__':
+#     path='/home/arya/amir'
+#     R = map(lambda x : np.array(map(int,eval(x))),file(path).readlines())
+#     names= np.array(map(eval,file('/home/arya/dsid').readlines())[0])
+#     print names
+#     for r in R:
+#         print names[np.where(r)[0]]
+#         print r[np.where(r)[0]]
+    path='/home/arya/workspace/biocaddie/ranking/paper/'
+    
+    
+    sessions=['arya12_03_2015_11_31_28__',
+            'stephanie12_03_2015_21_19_22__',
+            'erlevy13_03_2015_00_25_49__',
+            'cleo12_03_2015_23_59_58__',
+            'xiaoqianjiang12_03_2015_22_20_14__'
+#             'xiaoqianjiang13_03_2015_01_19_12__'
+#             'stephanie12_03_2015_21_19_22__',
+#             'cleo12_03_2015_21_47_50__',
+#             'ali12_03_2015_22_05_41__',
+#             'xiaoqianjiang12_03_2015_22_20_14__'
+              ]
 
+    plot_loss_sessions(sessions)
+    
+    sessions=['arya12_03_2015_11_31_28__',
+              'stephanie12_03_2015_21_19_22__',
+              'ali12_03_2015_22_05_41__',
+              'cleo12_03_2015_21_47_50__',
+#               'cleo12_03_2015_23_59_58__',
+#               'erlevy13_03_2015_00_25_49__',
+            'xiaoqianjiang12_03_2015_22_20_14__'
+#             'xiaoqianjiang12_03_2015_22_20_14__'
+              ]
+    plot_dis_sessions(sessions)
+#     
+    

@@ -1,28 +1,6 @@
 \documentclass[twoside,11pt]{article}
 \input{macros-arya}
-% Any additional packages needed should be included after jmlr2e.
-% Note that jmlr2e.sty includes epsfig, amssymb, natbib and graphicx,
-% and defines many common macros, such as 'proof' and 'example'.
-%
-% It also sets the bibliographystyle to plainnat; for more information on
-% natbib citation styles, see the natbib documentation, a copy of which
-% is archived at http://www.jmlr.org/format/natbib.pdf
-
-\usepackage{jmlr2e}
-
-% Definitions of handy macros can go here
-
-%\newcommand{\dataset}{{\cal D}}
-%\newcommand{\fracpartial}[2]{\frac{\partial #1}{\partial  #2}}
-
-% Heading arguments are {volume}{year}{pages}{submitted}{published}{author-full-names}
-
-\jmlrheading{}{}{}{}{}{}
-
-% Short headings should be running head and authors last names
-
-\ShortHeadings{}{}
-\firstpageno{1}
+\usepackage{arya}
 \def\bfyg{\bfy_{\text{\tiny G}}}
 \def\bfyk{\bfy_{\text{\tiny K}}}
 \def\bfxm{{\bfx_{\text{\tiny M}}}}
@@ -45,7 +23,7 @@
 %       9500 Gilman Dr., La Jolla, CA 92037, USA
 %       }
 
-\editor{}
+%\editor{}
 
 \maketitle
 
@@ -53,7 +31,7 @@
 
 \section{methods} 
 In this part we explain the methods we used to analyse the correlations between MeSH terms and of repositories.
-Basically, we consider all the trends throughout time as a \emph{continues-time random process}, which is simply an infinite dimensional random variable. For example, let $\bfy(t)$ is a random process, infinite dimensional random variable, for repository trend which for each repository is different and it changes over time. For the sake of simplicity, We discretize the time for the random process $\bfy(t)$ by choosing to take samples every year. Thus we can express the random process of the trends of GEO repository as a limited sequence of random variables: $\bfyg (t) = [\bfyg(t_1), \cdots, \bfyg(t_T) ]$.  In the same way we define random process $\bfyk(t)$ for the trend  of GenBank Repository, and random preocesses $\bfxm_i(t)$ for $i^{th}$ MeSH term in the dataset. Thus the goal is to find correlations, though local, between MeSH terms, $\bfxm_i(t)$, and repositories, $\bfyg(t)$ and $\bfyk(t)$.
+Basically, we consider all the trends throughout time as a \emph{continues-time random process}, which is simply an infinite dimensional random variable. For example, let $\bfy(t)$ is a random process, infinite dimensional random variable, for repository trend which for each repository is different and it changes over time. For the sake of simplicity, We uniformly discretize the time for the random process $\bfy(t)$ by choosing to take samples every year. Thus we can express the random process of the trends of GEO repository as a limited sequence of random variables: $\bfyg (t) = [\bfyg(t_1), \cdots, \bfyg(t_T) ]$.  In the same way we define random process $\bfyk(t)$ for the trend  of GenBank Repository, and random preocesses $\bfxm_i(t)$ for $i^{th}$ MeSH term in the dataset. Thus the goal is to find correlations, though local, between MeSH terms, $\bfxm_i(t)$, and repositories, $\bfyg(t)$ and $\bfyk(t)$.
 
 In our study we set $t_1=2004$ and $t_T=2014$ and evaluate variables at the end of each year.
 
@@ -63,12 +41,17 @@ For the repository trends, we assigned the value of to the instantiation of each
 \eeq
 where $\bfc_{\text{\tiny G}}(t_i)$ is the number of times that datasets of GEO repository has been cited between $t_{i-1}$ and $t_i$. The same quantity can be computed readily for GenBank repository.
 
-For the MeSH term trends we need to evaluate the influence of each Mesh term in each year. In other words, in each year, we are interested in evaluating how much a  MeSH term is a predictor of repository. For evaluating values of $\bfxm_i(t)$, for each $t$ we train a linear Support Vector Machine to predict(SVM) repository, based on MeSH terms that has been attributed to the datasets. So, we build the dataset $\Dc=\{(x_1,y_1), \cdots , (x_n,y_n) \}$ where $n$ is the number of datasets $x_i\in\Nbb^d$ is the MeSH term representation of the $i^{th}$ dataset and $y_i\in \{GEO,GenBank\}$ is the label of that dataset. Here $d$ is the number of mesh terms in our MeSH vocabulary and $x_ij$ is an integer value implying how many times the $j^{th}$ MeSH term has appeared in the all papers that used the $i^{th}$ dataset. We partitioned the dataset to disjoint set $\Dc^{(t)}$ , which each-year-dataset $\Dc^{(t)}$ only contain datasets that has been used in the papers of that year. Then, for each  year we trained an linear SVM, find $\bfw^{(t)}$ for all $t$, for each of the datasets and chose the hyperparameters so that the cross validation accuracy is maximized. 
+For the MeSH term trends we need to evaluate the influence of each Mesh term in each year. In other words, in each year, we are interested in evaluating how much a  MeSH term is a predictor of repository. For evaluating values of $\bfxm_i(t)$, for each $t$ we train a linear Support Vector Machine to predict(SVM) \cite{SVN} repository, based on MeSH terms that has been attributed to the datasets. So, we build the dataset $\Dc=\{(x_1,y_1), \cdots , (x_n,y_n) \}$ where $n$ is the number of datasets $x_i\in\Nbb^d$ is the MeSH term representation of the $i^{th}$ dataset and $y_i\in \{GEO,GenBank\}$ is the label of that dataset. Here $d$ is the number of mesh terms in our MeSH vocabulary and $x_ij$ is an integer value implying how many times the $j^{th}$ MeSH term has appeared in the all papers that used the $i^{th}$ dataset. We partitioned the dataset to disjoint set $\Dc^{(t)}$ , which each-year-dataset $\Dc^{(t)}$ only contain datasets that has been used in the papers of that year. Then, using LibSVM \cite{libsvm}, for each  year we trained an linear SVM, find $\bfw^{(t)}$ for all $t$, for each of the datasets and chose the hyperparameters so that the cross validation accuracy is maximized. 
 
-The linear SVM classifier trains a linear decision function $f(x_i)=\bfw^T x_i$ where x is the feature vector and $\bfw \in \Rbb^d$ is the weight vector which is optimized in the SVM's training process. In addition to the model for predicting class labels, weights can be considered as a measure of how much each feature is predict of the class labels. For instance, the $j$s for which $\bfw_j=0$ (or close to zero) we can infer that corresponding features have zero (or negligible) influence on the decision value, and we can ignore them. 
+The linear SVM classifier trains a linear decision function $f(x_i)=\bfw^T x_i$ where x is the feature vector and $\bfw \in \Rbb^d$ is the weight vector which is optimized in the SVM's training process. In addition to the model for predicting class labels, weights can be considered as a measure of how much each feature is predictive of the class labels and in can be used for general feature selection \cite{Guyon03}. For instance, the $j$s for which $\bfw_j=0$ (or close to zero) we can infer that corresponding features have zero (or negligible) influence on the decision value, and we can ignore them. 
 
 In this paper, we use the weights $\bfw_j^{(t)}$ to quantitatively measure the influence of $j^{th}$ MeSH term in $t^{th}$ year, and set $\bfxm_j (t) = [\bfxm_j(t_1), \cdots, \bfxm_j(t_T) ] = [\bfw_j(t_1), \cdots, \bfw_j(t_T) ]$.
 
-Having specified all the trends, we can now analyze the (local and global) correlations between each MeSH trend $\bfxm_j(t)$ repository trend $\bfyg(t)$ and $\bfyk(t)$.
+Having specified all the trends, we can now analyze the (local and global) correlations between each MeSH trend $\bfxm_j(t)$ repository trend $\bfyg(t)$ and $\bfyk(t)$. 
+
+
+
+\bibliography{/home/arya/Documents/library}
 
 \end{document}
+

@@ -250,24 +250,48 @@ DataEngine is deployed on an Ubuntu 13.04 system with Intel Xeon X5650 2.67GHz a
     
         In order to help user evaluate and understanding datasets orders better, we offer several parameters, such as posterior likelihood value (online ranking results) and raw prior probability. Counts of citations are also provided. All these statistics could be used as an compliment of metadata in order to have a better understanding of datasets.
 \subsection{Experiments}
-We consider tree set of experiments to evaluate
+Unfortunately for such a novel problem, to this time, there is no labaled dataset which ground truth ranking of datasets are known. The lack of labeled dataset is not only a challenge for learning a predictive model, but also makes evaluation of the model more tricky. Yet, we set to perform two set of experiments to show that
 \begin{enumerate}
-\item {\bf Convergence} in this experiment user searches for a query, e.g. "DNA", and for $t=1\cdots T$ enters/updates ratings  $\bfr^{(t)}$ for \emph{all} the top 20 results. By defining $\bfr^{(0)}= {\mathbf 0}$, for $t=1\cdots T$ we compute
+\item by getting user feedbacks, DataRank actually learns about user preferences  
+\item DataRank provides user-specialized results for each user
+\end{enumerate}
+
+In the first set of experiment we aim to show how well DataRank predicts user ratings, by comparing DataRank by gold-standard  ranking, the ranking in which is presented by DataRank given current features and actual user ratings, i.e. the best possible ranking using DataRank and full labels \cite{Shalev-shwartz2008}. 
+Since the ranking is linearly related to its user rating, we measure the discrepancy between DataRank ranking and gold-standard DataRank rankings by just measure the \emph{loss} between the predicted value of rating and and the actual user rating. For instance, suppose at $t^{th}$ step user rates $j^{th}$ dataset, we can easily compute the loss
 \beq
-\kappa^{(t)}=\kappa(\bfr^{(t-1)} , \bfr^{(t)})
+\bfl^{(t)}=|\hat{\bfr}_j^{(t-1)} -\bfr_j^{(t)}|
 \eeq
-we show that $\kappa^{(t)}$ monotonously converges to 1, i.e., user can not improve the results any more,.
-\item {\bf Improvement} The setting of this experiment is exactly the same as previous, so the statistics can be concurrently recorded. in this experiment for $t=1\cdots T$ we compute average rating 
+where $\hat{\bfr}$ is the predicted user rating in previous step.
+Since the loss is quite instantaneous we smooth it by defining \emph{regret} \cite{Shalev-shwartz2008} as average loss until know
 \beq
-\bbfr^{(t)}=\frac{\sum_i \bfr_i^{(t)}}{m}
+\bfR^{(t)}=\frac{1}{t} \sum_k^{t} |\hat{\bfr}_j^{(k-1)} -\bfr_j^{(k)}|
 \eeq
-we will show that the average rating is a monotone non-decreasing, i.e., user finds ranking results more useful.
-\item {\bf Specialization} in this experiment we show that DataRank is able to present user special results. For this case user A and B search for the same query, e.g. "Mice", and $t=1\cdots T$ we compute
+
+we computed regret for each time for 5 different subjects and the rults for 20 feedbacks are shown in Figure \ref{fig:regret}.
+It can be seen that regret has a global decreasing meaning that throughout time, DataRank make more accurate predictions.
+
+For the second set of experiments we set different subjects search for the same query and rate the results according to their preferences. Then we  in this experiment we show that DataRank is able to present user special results. For this case user A and B search for the same query, e.g. "Mice", and $t=1\cdots T$ we compute the \emph{Kappa statistic} \cite{kappa} for measuring disagreement between users. For example we cam compute the ratings between users $A$ and $B$ at each time
 \beq
 \kappa_{A,B}^{(t)}=\kappa(\bfr_A^{(t)} , \bfr_B^{(t)})
 \eeq
-we will show that this curve is not increasing, users tend to have disagreement, in personalized ranking.
-\end{enumerate}
+We again run this experiment for 5 subjects using the same query and computed parwise kappa score for all the users and depicted their average throughout time in Figure \ref{fig:dis}. Figure \ref{fig:dis} shows that even for the same query users tend to have disagreement which leads to different rating for each user.
+
+
+\begin{figure}
+\centering
+\begin{tabular}{cc}
+\includegraphics[scale=0.25]{Loss.png}  & \includegraphics[scale=0.25]{Regret.png}\\
+(a) & (b)
+\end{tabular}
+\caption{Loss and Regret of predicted ratings throoughout time.}\label{fig:regret}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[scale=0.5]{dis.png} 
+\caption{Average disagreement between users.}\label{fig:dis}
+
+\end{figure}
 \section{Conclusions} \label{sec:conclusions}
 (Xiaoqian)
 
