@@ -26,9 +26,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="5.6"
-     inkscape:cx="527.54339"
-     inkscape:cy="455.19544"
+     inkscape:zoom="2.8"
+     inkscape:cx="451.20095"
+     inkscape:cy="467.92936"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -106,7 +106,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -116,23 +116,32 @@
      id="layer1">
     <circle
        r="24.201395"
-       cy="717.36218"
-       cx="355.99695"
+       cy="718.33759"
+       cx="356.57092"
        id="path3346-3-70"
-       style="fill:#b3b3b3;fill-rule:evenodd;stroke:#000000;stroke-width:1.59721029;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+       style="fill:#b3b3b3;fill-rule:evenodd;stroke:#000000;stroke-width:1.59721029;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-filename="/home/arya/workspace/biocaddie/ranking/paper/path5496.png"
+       inkscape:export-xdpi="500"
+       inkscape:export-ydpi="500" />
     <circle
        r="24.201395"
        cy="590.83759"
        cx="457.10663"
        id="path3346-3-74"
-       style="fill:#b3b3b3;fill-rule:evenodd;stroke:#000000;stroke-width:1.59721029;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+       style="fill:#b3b3b3;fill-rule:evenodd;stroke:#000000;stroke-width:1.59721029;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-filename="/home/arya/workspace/biocaddie/ranking/paper/path5496.png"
+       inkscape:export-xdpi="500"
+       inkscape:export-ydpi="500" />
     <rect
-       style="fill:none;stroke:#000000;stroke-width:2;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:none;stroke:#000000;stroke-width:1.76271355;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="rect5106"
-       width="76.636917"
-       height="124.00719"
-       x="418.78821"
-       y="533.5174" />
+       width="76.874207"
+       height="96.03019"
+       x="318.66956"
+       y="669.61304"
+       inkscape:export-filename="/home/arya/workspace/biocaddie/ranking/paper/path5496.png"
+       inkscape:export-xdpi="500"
+       inkscape:export-ydpi="500" />
     <g
        transform="matrix(0.6,0,0,0.6,268.3097,384.11543)"
        id="g6098">
@@ -156,7 +165,10 @@
        inkscape:connector-curvature="0" />
     <g
        id="g5218"
-       transform="matrix(0.6,0,0,0.6,268.55203,383.40105)">
+       transform="matrix(0.6,0,0,0.6,168.01632,510.90105)"
+       inkscape:export-filename="/home/arya/workspace/biocaddie/ranking/paper/path5496.png"
+       inkscape:export-xdpi="500"
+       inkscape:export-ydpi="500">
       <g
          word-spacing="normal"
          letter-spacing="normal"
@@ -195,8 +207,11 @@
            d="m 480.72,424.93 0.07,0.13 0.06,0.12 0.04,0.06 0.03,0.05 0.04,0.05 0.04,0.05 0.05,0.05 0.05,0.05 0.05,0.04 0.06,0.04 0.06,0.04 0.07,0.04 0.08,0.04 0.09,0.03 0.09,0.03 0.1,0.03 0.12,0.03 0.12,0.02 0.13,0.03 0.07,0.01 0.07,0.01 0.08,0.01 0.08,0.01 0.08,0.01 0.09,0.01 0.09,0 0.09,0.01 0.1,0.01 0.1,0 0.1,0.01 0.11,0 0.11,0.01 0.11,0 0.12,0.01 0.12,0 0.13,0 0.13,0.01 0.13,0 0.14,0 0.14,0 0.15,0 0,2.34 c -1.19,-0.11 -2.69,-0.15 -3.94,-0.15 -1.23,0 -3.48,0.11 -4.53,0.15 l 0,-2.34 c 0.11,0 2.35,0 2.35,-0.59 0,-0.07 -0.21,-0.55 -0.25,-0.61 l -5.72,-12.25 -6.33,13.45 2.69,0 0,2.34 c -1.64,-0.11 -6.13,-0.15 -6.19,-0.15 -1.39,0 -3.63,0.11 -5.67,0.15 l 0,-2.34 3.18,0 9.32,-19.78 -1.14,-2.39 c -1.1,-2.39 -2.69,-5.78 -6.24,-5.78 -0.69,0 -0.8,0.04 -1.19,0.2 0.44,0.2 1.6,0.89 1.6,2.64 0,1.64 -1.21,2.84 -2.89,2.84 -1.39,0 -2.85,-0.95 -2.85,-2.89 0,-2.54 2.35,-4.59 5.33,-4.59 3.85,0 6.74,3.09 8.08,5.94 z"
            id="path5267" /></g>    </g>
     <g
-       transform="matrix(0.6,0,0,0.6,166.93211,507.7464)"
-       id="g5305">
+       transform="matrix(0.6,0,0,0.6,267.46783,380.96068)"
+       id="g5305"
+       inkscape:export-filename="/home/arya/workspace/biocaddie/ranking/paper/path5496.png"
+       inkscape:export-xdpi="500"
+       inkscape:export-ydpi="500">
       <g
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;letter-spacing:normal;word-spacing:normal;text-anchor:start;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10.43299961;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
          word-spacing="normal"
@@ -215,8 +230,11 @@
            id="path5309"
            d="m 477.35,424.68 -0.17,0.23 -0.17,0.22 -0.18,0.21 -0.19,0.21 -0.19,0.21 -0.19,0.19 -0.2,0.19 -0.21,0.19 -0.21,0.18 -0.21,0.17 -0.22,0.16 -0.23,0.16 -0.23,0.15 -0.23,0.15 -0.23,0.14 -0.24,0.13 -0.25,0.12 -0.25,0.12 -0.25,0.11 -0.25,0.1 -0.26,0.09 -0.26,0.09 -0.26,0.08 -0.26,0.07 -0.27,0.06 -0.27,0.06 -0.27,0.04 -0.28,0.04 -0.27,0.03 -0.28,0.02 -0.27,0.02 -0.28,0 c -7.27,0 -12.41,-4.44 -12.41,-11.36 0,-7.03 5.03,-11.36 11.95,-11.36 l 0.5,1.8 c -3.07,0 -6.07,2.89 -6.07,9.51 0,7.07 3.68,9.41 6.68,9.41 3.78,0 6.17,-3.94 6.17,-6.42 l 0,-6.92 c 0,-0.91 0,-1.05 -0.75,-2.1 -1.98,-2.93 -4.53,-3.48 -6.03,-3.48 l -0.5,-1.8 c 2.46,0 4.69,0.71 6.99,2.69 l 0,-9.72 -3.44,0 0,-2.34 c 1.39,0.06 4.38,0.15 6.28,0.15 1.94,0 4.88,-0.09 6.27,-0.15 l 0,2.34 -3.44,0 0,29.75 -2.03,0 z" /></g>    </g>
     <g
-       transform="matrix(0.6,0,0,0.6,286.44431,439.10488)"
-       id="g5353">
+       transform="matrix(0.6,0,0,0.6,186.44431,547.10488)"
+       id="g5353"
+       inkscape:export-filename="/home/arya/workspace/biocaddie/ranking/paper/path5496.png"
+       inkscape:export-xdpi="500"
+       inkscape:export-ydpi="500">
       <g
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;letter-spacing:normal;word-spacing:normal;text-anchor:start;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:#000000;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:10.43299961;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
          id="g5355"
@@ -270,12 +288,18 @@
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker5816)"
        d="m 446.78572,612.8979 c -0.89286,0.35714 -76.96429,83.39285 -76.96429,83.39285"
        id="path5494"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/arya/workspace/biocaddie/ranking/paper/path5496.png"
+       inkscape:export-xdpi="500"
+       inkscape:export-ydpi="500" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#marker5788)"
        d="m 277.85714,613.61218 63.03572,83.39286"
        id="path5496"
-       inkscape:connector-curvature="0" />
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/arya/workspace/biocaddie/ranking/paper/path5496.png"
+       inkscape:export-xdpi="500"
+       inkscape:export-ydpi="500" />
     <path
        style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Mend)"
        d="m 351.60714,476.6479 -76.96428,89.64285"

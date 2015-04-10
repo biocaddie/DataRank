@@ -28,16 +28,16 @@
      inkscape:window-width="3775"
      showgrid="false"
      inkscape:document-units="px"
-     inkscape:cy="496.07358"
-     inkscape:cx="355.4893"
-     inkscape:zoom="15.839192"
+     inkscape:cy="483.65777"
+     inkscape:cx="359.72132"
+     inkscape:zoom="3.959798"
      inkscape:pageshadow="2"
      inkscape:pageopacity="0.0"
      borderopacity="1.0"
      bordercolor="#666666"
      pagecolor="#ffffff"
      id="base"
-     inkscape:current-layer="svg2" />
+     inkscape:current-layer="layer1" />
   <defs
      id="defs4">
     <marker
@@ -135,7 +135,7 @@
        y="403.56244"
        x="438.88324"
        width="35.433071"
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#cccccc;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="inkscape-table1"
        height="35.433071" />
     <rect
@@ -188,7 +188,7 @@
        y="438.99548"
        x="438.88324"
        width="35.433071"
-       style="fill:none;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#cccccc;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="inkscape-table10"
        height="35.433071" />
     <rect
@@ -241,7 +241,7 @@
        y="474.60675"
        x="438.79279"
        width="35.613972"
-       style="fill:none;stroke:#000000;stroke-width:0.81909966px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       style="fill:#cccccc;stroke:#000000;stroke-width:0.81909966px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
        id="inkscape-table1V"
        height="141.9129"
        ns0:merged="6,1"
@@ -375,7 +375,7 @@
      y="403.83072"
      x="227.66536"
      width="35.433071"
-     style="fill:none;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="fill:#cccccc;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="inkscape-table0H"
      height="35.433071" />
   <rect
@@ -428,7 +428,7 @@
      y="439.26379"
      x="227.66536"
      width="35.433071"
-     style="fill:none;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="fill:#cccccc;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="inkscape-table0I"
      height="35.433071" />
   <rect
@@ -451,7 +451,7 @@
      y="474.69687"
      x="227.66536"
      width="35.433071"
-     style="fill:none;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+     style="fill:#cccccc;stroke:#000000;stroke-width:1px;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
      id="inkscape-table0Q"
      height="141.73228"
      ns0:merged="4,1"
