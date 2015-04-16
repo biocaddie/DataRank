@@ -39,7 +39,7 @@ def get_stopwords():
 def get_BoW(corpus):
     Abs, DT, dic= [],[], {}
     for doc in corpus:
-        dic, dt= insertToDic(dic, doc)
+        dic, dt= insertToDic(dic, doc) ##  updates dictionary and creates BoW
         Abs.append(doc)
         DT.append(dt)
     
@@ -51,6 +51,29 @@ def get_BoW(corpus):
             except KeyError:
                 TD[termID]={i+1:freq}
     return Abs, DT, TD, dic
+
+def insertToDic(dic,abs):
+    """
+    Inserts new terms into dictionary and then returns the representation of the document
+    """
+    regex = re.compile(r"\b[a-z]\w+\b")
+#     stopwords=get_stopwords()
+#     abs=" ".join(w for w in abs.split() if not w in stopwords)
+    words=regex.findall(abs)
+#     words= abs.split()
+    DT={}
+    for w in words:
+        w=w.lower()
+        try:
+            idx= dic[w]
+        except KeyError:
+            idx=len(dic)
+            dic[w.lower()]=idx
+        if idx in DT:
+            DT[idx] += 1
+        else:
+            DT[idx] = 1
+    return dic, DT
 
 def clean2(corpus):
     corpus[0]=corpus[0][:35]
@@ -130,28 +153,7 @@ def clean(corpus, th =0.05):
     return 1
 
 
-def insertToDic(dic,abs):
-    """
-    Inserts new terms into dictionary and then returns the representation of the document
-    """
-    regex = re.compile(r"\b[a-z]\w+\b")
-#     stopwords=get_stopwords()
-#     abs=" ".join(w for w in abs.split() if not w in stopwords)
-    words=regex.findall(abs)
-#     words= abs.split()
-    DT={}
-    for w in words:
-        w=w.lower()
-        try:
-            idx= dic[w]
-        except KeyError:
-            idx=len(dic)
-            dic[w.lower()]=idx
-        if idx in DT:
-            DT[idx] += 1
-        else:
-            DT[idx] = 1
-    return dic, DT
+
 
 def insertToReducedDic(dic, dic_old, abs):
     """
