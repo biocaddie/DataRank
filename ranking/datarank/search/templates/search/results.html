@@ -1,0 +1,197 @@
+{% extends "mybase.html" %}
+
+{% block head %}
+    {% load search_extra %}
+
+{% endblock %}
+
+{% block search %}
+
+    <nav class="nav">
+    <ul class="nav-list">
+        <li class="nav-item">
+           <a class="pure-button" href="javascript: searchsubmit()">Search</a>
+        </li>
+        <li class="nav-item">
+           <a class="pure-button" href="javascript: refresh()">Re-Rank</a>
+        </li>
+    </ul>
+    </nav>
+
+{% endblock %}
+
+{% block sth_cool %}
+<h1 class="content-subhead">Something Cool</h1>
+<p>
+    <label style="background-color:grey; color:white;">
+        Current Keywords
+    </label>
+    : {{keyword}}
+</p>
+
+<p>
+    <label style="background-color:grey; color:white;">
+        Features Importance 
+    </label> 
+    : to be added.
+</p>
+{% endblock %}
+
+{% block content %}
+    <h1 class="content-subhead">Search Results</h1>
+    <form type="hidden" id="rankinfo" name="rankinfo" action="/refresh/" method="post">
+        {% csrf_token %}
+        <input id="rank_info" name="rank_info" type="hidden"/>
+        <input id="is_tmp" name="is_tmp" type="hidden"/>
+    </form>
+
+    <div class="pure-g">
+    {% if lists_top %}
+        {% for rating, li, pred, jacc, jraw in lists_top %}
+        <div class="pure-u-1-3">
+            <div>
+            <p align="left"> 
+                [{{forloop.counter}}] <a href="{{li.Url}}" target="_blank">{{ li.ID }}</a>
+            </p>
+            <form id="f{{ forloop.counter }}" class="pure-form" action="" method="post">
+                <input type="hidden" name="dname" value="{{ li.ID }}"/>
+                    {% if rating == 5 %}
+                        <input type="radio" name="prefs" value="5" checked="checked" /> Perfect!
+                    {%  else %}
+                        <input type="radio" name="prefs" value="5" /> Perfect!
+                    {% endif %}
+                    </br>
+                    {% if rating == 4 %}
+                        <input type="radio" name="prefs" value="4" checked="checked" /> Good
+                    {%  else %}
+                        <input type="radio" name="prefs" value="4" /> Good
+                    {% endif %}
+                    </br>
+                    {% if rating == 3 %}
+                        <input type="radio" name="prefs" value="3" checked="checked" /> Okay
+                    {%  else %}
+                        <input type="radio" name="prefs" value="3" /> Okay
+                    {% endif %}
+                    </br>
+                    {% if rating == 2 %}
+                        <input type="radio" name="prefs" value="2" checked="checked" /> Bad
+                    {%  else %}
+                        <input type="radio" name="prefs" value="2" /> Bad
+                    {% endif %}
+                    </br>
+                    {% if rating == 1 %}
+                        <input type="radio" name="prefs" value="1" checked="checked" /> Disaster
+                    {%  else %}
+                        <input type="radio" name="prefs" value="1" /> Disaster
+                    {% endif %}
+                    </br>
+                {% if rating == 0 %}
+                    <input type="radio" name="prefs" value="0" checked="checked" /> Not Yet
+                {%  else %}
+                    <input type="radio" name="prefs" value="0" /> No Idea
+                {% endif %}
+            </form>
+
+            <div style="font-size: 80%">
+                <a href="javascript:void(0)" class="collapsed" >Expand Statistics</a>
+                <a href="javascript:void(0)" class="expanded">Collapse</a>
+                <div class="expanded2" >
+                    <table class="pure-table pure-table-horizontal">
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Values</th>
+                            </tr>
+                        </thead>
+                        </tbody>
+                            <tr>
+                                <th>ID</th>
+                                <th>{{ li.ID }}</th>
+                            </tr>
+                            <tr>
+                                <th>#cites</th>
+                                <th>{{ li.Count }}</th>
+                            </tr>
+                            <tr>
+                                <th>log_posterior</th>
+                                <th>{{pred|floatformat:3}}</th>
+                            </tr>
+                            {% if jacc %}
+                            <tr>
+                                <th>log_likelihood</th>
+                                <th>{{jacc|floatformat:3}}</th>
+                            </tr>
+                            {% endif %}
+                            {% if jraw %}
+                            <tr>
+                                <th>raw_likelihood</th>
+                                <th>{{jraw|floatformat:3}}</th>
+                            </tr>
+                            {% endif %}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div style="font-size: 80%">
+                <a href="javascript:void(0)" class="collapsed">Add Comments</a>
+                <a href="javascript:void(0)" class="expanded">Collapse</a>
+                <div class="expanded2">
+                    <form id="ano{{forloop.counter}}" action="/comment/" method="post">
+                        {% csrf_token %}
+                        <input type="textarea" id="comment" name="comment" style="width:90%"/>
+                        <input id="dataset_id" name="dataset_id" type="hidden" value="{{li.ID}}"/>
+                        <input id="keyword" name="keyword" type="hidden" value="{{li.ID}}"/>
+                        <input id="user" name="user" type="hidden" value="{{li.ID}}"/>
+                        <input type="submit" value="Submit">
+                    </form>
+                </div>
+            </div>
+
+            </div>
+            </br>
+    </div>
+    <div class="pure-u-2-3">
+        </br></br>
+        <p align="left" style="width:70%"> 
+            Features: {{ li.Features }}
+        </p>
+    </div>
+        {% endfor %}
+    {% else %}
+        <p>{{instruction}}</p>
+        </br>
+        </br>
+        </br>
+    {% endif %}
+    </div>
+
+    <div class="pagination" align="right">
+    <span class="step-links" align="right">
+        {% if lists_top.has_previous %}
+            <a id="previous" href="?page={{ lists_top.previous_page_number }}">previous</a>
+        {% endif %}
+
+        <span class="current">
+            Page {{ lists_top.number }} of {{ lists_top.paginator.num_pages }}.
+        </span>
+
+        {% if lists_top.has_next %}
+            <a id="next" href="?page={{ lists_top.next_page_number }}">next</a>
+        {% endif %}
+    </span>
+</div>
+{% endblock %}
+
+
+{% block cheatsheet %}
+<h1 class="content-subhead">Cheatsheet</h1>
+<ul>
+    <li>Perfect: Exactly what I'm looking for!, show me more similar results to this!</li>
+    <li>Good: it is not exactly  what I want but it's quite related</li>
+    <li>OK: generally  related to my topic</li>
+    <li>Bad: not related</li>
+    <li>Disaster:  Totally irrelevant! or Bad Link</li>
+</ul>
+{% endblock %}
+
