@@ -34,7 +34,6 @@ def get_stopwords():
 #     from nltk.corpus import stopwords   ## JMLR stopwords is a superset of nltk
 #     Dic= list(set(Dic).union(set(stopwords.words('english'))))
     return Dic
-    
 
 def get_BoW(corpus):
     Abs, DT, dic= [],[], {}
