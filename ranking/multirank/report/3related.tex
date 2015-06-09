@@ -1,0 +1,41 @@
+\section{Related Work}
+\label{sec:related}
+Many statistical averages or indices have been proposed in bibliometrics as a measurement of bibliographic importance, such as impact factor (average citations received during two preceding years)~\cite{garfield1972citation}, immediacy index (number of citations received in a given time frame divided by the number of articles published for journal), cited half-life (median age of cited articles)~\cite{elsevier}, and Hirsch index (based on some of citation distribution)~\cite{hirsch2005index}. Centrality measures, which identify important vertices within networks, have also been used for ranking, typically in a social network environment. The four most common of these measures include degree centrality (degree number of the node), betweenness centrality (number of shortest paths that pass through the node), closeness centrality (reciprical of the sum of a node's shortest path from all other nodes), and eigenvector centrality.
+
+Prioritization of relevant datasets added to the immense scale of the biomedical search space share similar problems to search engines and webpage ranking. It's thus no surprise that a large amount of work in bibliometrics and ranking has borrowed ideas from web ranking, specifically PageRank~\cite{pagerank} and HITS~\cite{hits}. PageRank makes use of the web's hyperlink structure to give an approximation of a web page's importance or quality. It is stated as an eigenvalue problem of solving for a stationary probability distribution that is described by a random walk on the graph of a web network. The pagerank metric constitutes the probability of a random surfer (a web surfer who is given pages at random and keeps clicking links, eventually getting bored and starting on another random page) arriving at a page. The HITS algorithm follows a mutual reinforcement principle by using two scores to rank webpages: an authority score estimates the value of the pages's content and a hub score measures the value of the pages's links to other pages. These works all feature recommendation based on ranking designed for a homogeneous system, with web pages as the single object type and links between pages as the relation or edges of the network. 
+
+Building upon these and applying the methods to heterogeneous networks, PopRank~\cite{nie2005object} adds popularity to each link in the PageRank framework, Deng et al.~\cite{deng2009generalized} explore a generalized co-HITS algorithm to incorporate a bipartite graph with content information from both sides of the graph, and~\cite{zhu2007combining} combines content and links for hypertext classification through matrix factorization.
+
+Moving towards the multi-dimensional space, tensors have been utilized to represent multi-relational data with much work on efficient mathematical frameworks and algorithms in tensor factorization to solve a set of multivariate polynomial equations arising from these data. For example, MetaFac~\cite{lin2009metafac} proposes a hypergraph representation and its factorization to discover community structure in rich networks, TOPHITS~\cite{kolda2006tophits} adds anchor text of links to the computation of hub and authority scores through tensor rank decomposition, and cubeSVD~\cite{sun2005cubesvd} incorporates user clickthrough data to personalize web search with the use of high-order singular value decomposition techniques. 
+
+
+    \begin{table}[h]
+    \centering
+    \resizebox{\columnwidth}{!}{
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \textbf{\begin{tabular}[c]{@{}c@{}}Feature / \\ Network Property\end{tabular}} & \textbf{Data} & \textbf{Metadata} \\ \hline
+    \textbf{Homogeneous} & --- & \begin{tabular}[c]{@{}c@{}}Impact Factor, immediacy index;\\ PageRank, HITs\end{tabular} \\ \hline
+    \textbf{Heterogeneous} & OmicSeq & \begin{tabular}[c]{@{}c@{}}Corank, Multirank, PopRank, co-HITS; \\ MetaFac, TOPHITS, cubeSVD;\\ RankClus, NetClus\end{tabular} \\ \hline
+    \end{tabular}}
+    \caption{Summary of Related Work based on Feature vs. Network Property}
+    \label{tab:related}
+    \end{table}
+
+
+In addition to using ranking measures to make recommendations, clustering approaches have been used for recommendation systems by identifying similar objects via grouping and propagating information from these similar objects. RankClus~\cite{sun2009rankclus} integrates clustering with ranking on hetergeneous information networks. NetClus~\cite{varadharajalu2011author} builds upon this by adding an author disambiguation technique and applies it to PubMed data.
+
+Finally, the most comparable prototype is the biomedical knowledge discovery system OmicSeq~\cite{omicseq} (currently in beta) led by Dr. Zhaohui Steve Qin, who incidentally has been brought on as a collaborator of the bioCADDIE umbrella. OmicSeq gives researchers easy access to data by building a database emcompassing publicly available omics data and providing a ranked data browser to efficiently browse and gain insights through hidden functional relationships. His browser allows direct gene querying, rather than querying with metadata. OmicSeq uses their ``trackRank algorithm''. This two-step ranking first ranks the percentage of each gene's expression within a dataset compared to all other gene expressions in the dataset, then ranks these rankings between datasets.
+% which is based on the idea that a gene plays an important role in a dataset if its score ranks at the top among all genes in the genome, to rank results. 
+
+
+\paragraph{DataRank}
+Our results of author and journal rankings is used to calculate conditional rankings between authors and datasets to enhance the DataRank~\cite{datarank} project. DataRank aims to make personalized data recommendations based on content similarity and user background. Here a quick summary of the existing prototype is discussed.
+
+First, a bipartite citation graph between datasets and publications is created by crawling PMC dataset citations using regular expressions based on dataset naming rules. Then dataset features are generated as a binary vector of MeSH terms propogated from the MeSH terms of its citing publications. Finally, datasets are ranked based on a combination of these generated features and user feedback. 
+
+Ranking follows a Bayesian approach and occurs in two phases: offline mode and online mode. The offline ranking given a query is the posterior distribution of dataset labels given evidence (query, dataset prior, and dataset features). This is found to be proportional to query likelihood and dataset prior, which they have defined as a Tanimoto coefficient and number of citations, respectively. The online algorithm takes user rating feedback to calculate another posterior distribution to present user-specific dataset rankings. Here the prior is simply the posterior calculated during the offline phase, and the likelihood is a normalization of estimated unknown user ratings. This estimate is a weighted linear combination of all rated datasets where weights are proportional to similarity (Jaccard index) between items.
+
+While an encouraging prototype, there are a number of limitations. The naive collaborative filtering model only takes into consideration dataset features using MeSH terms and ignores any user features. The system also ignores any temporal dependencies: search sessions are independent and rating results are not transferable. Lastly, any network influences contained in the citation network are not captured, and the dataset/publication authorship network, which may also provide some user-level features, is omitted. (Presumably, the users of this product may be researchers themselves within this author network.)
+
+This lack of user features and authorship network influence, in particular, is a key area of improvement in order to provide personalizable ranking results. Similarity measures between authors could be defined, and existing ratings of similar authors could be propagated to those users with fewer ratings. By conditioning on certain authors and user ratings, dataset rankings may be vastly different. Given particular datasets, we could also identify which authors are highly influential and perhaps incorporate this as features of the dataset.

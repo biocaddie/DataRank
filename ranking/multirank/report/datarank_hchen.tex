@@ -1,0 +1,85 @@
+\documentclass{acm_proc_article-sp}
+\usepackage{url}
+\usepackage{graphicx}
+% \usepackage[algosection, vlined, linesnumbered]{algorithm2e}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+\usepackage{subfigure}
+\usepackage{colortbl}
+\usepackage[table,xcdraw]{xcolor}
+
+\pagenumbering{arabic}
+
+\begin{document}
+\sloppy
+
+\title{Dataset Ranking using Citation and Coauthorship Networks}
+
+\numberofauthors{4} %  in this sample file, there are a *total*
+% of EIGHT authors. SIX appear on the 'first-page' (for formatting
+% reasons) and the remaining two appear in the \additionalauthors section.
+%
+\author{
+% 1st. author
+\alignauthor
+Hannah Chen\\
+       \affaddr{Computer Science and Engineering}\\
+       \affaddr{University of CA, San Diego} \\
+       \email{hechen@eng.ucsd.edu}
+% 2nd. author
+\alignauthor
+Xiaoqian Jiang\\
+       \affaddr{Department of Biomedical Informatics}\\
+       \affaddr{University of CA, San Diego}\\
+       \email{x1jiang@ucsd.edu}
+% 3rd. author
+\alignauthor 
+Arya Iranmehr\\
+       \affaddr{Electrical and Computer Engineering} \\
+       \affaddr{University of CA, San Diego}\\
+       \email{airanmehr@ucsd.edu}
+% \and  % use '\and' if you need 'another row' of author names
+% 4th. author
+\and
+\alignauthor 
+Shuang Wang\\
+       \affaddr{Department of Biomedical Informatics}\\
+       \affaddr{University of CA, San Diego}\\
+       \email{wsasyz@gmail.com}
+}
+
+\maketitle
+
+\begin{abstract}
+Biomedical sciences is increasingly moving towards data driven approaches. Unfortunately, the vast majority of biomedical datasets are underutilized after their initial publications due to the increased rate of dataset generation and difficulty in searching for relevant datasets. Efficient use of these existing datasets requires identifying important datasets for a given researcher to explore, which may be based on a combination of an individual's research interests, past publications and authorship network. 
+
+Bibliometrics and citation analysis have been used to find features, impact, and interrelationships between researchers and papers as well as to establish precedence of ideas and results offering evidence of the quality and significance of scientific work. Drawing insights from PageRank, three ranking approaches are implemented on a heterogeneous biomedical information network connected to nine breast cancer data series found in the Gene Expression Omnibus (GEO) data repository. 
+
+Author ranking results are qualitatively compared to show that the Multirank approach best fits the needs of the DataRank project, a personalized online recommendation system for biomedical datasets. Using the results of author and journal Multiranking, conditional probabilities of datasets given author are calculated. This enhances the DataRank system by adding citation analysis to its existing methods of generating features used to rank dataset recommendations.
+\end{abstract}
+
+
+\input{1intro}
+
+\input{2background}
+
+\input{3related}
+
+\input{4ranking}
+
+\input{5experiments}
+
+\input{6results}
+
+\input{7discussion}
+
+\input{8conclusion}
+
+
+% \clearpage
+\bibliographystyle{abbrv}
+\bibliography{sources}  
+\balancecolumns
+
+\end{document}

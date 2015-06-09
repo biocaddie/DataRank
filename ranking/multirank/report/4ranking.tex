@@ -1,0 +1,181 @@
+\section{Ranking Frameworks}
+By examining the state of the art methods from Section~\ref{sec:related} in the context of our problem and available data, we have identified two frameworks to explore. Corank~\cite{zhou2007co} and Multirank~\cite{ng2011multirank} are implemented to compare author rankings and resulted in three different ranking approaches: individual ranking, coranking, and multiranking. 
+
+\subsection{Corank} 
+Corank incorporates simple counting metrics, such as number of publications or number of citations, with network structure. It borrows ideas from previous ranking techniques, such as link analysis from PageRank and the mutual reinforcement principle of HITS, and applies this in the context of heterogeneous networks. Here it assumes a mutually reinforcing relationship between authors and publications: an author of higher rank will increase the rank of his or her publication, and a higher ranked publication will increase the rank of its authors. 
+
+A symmetric collaboration network connects authors, a directed citation network connects papers, and a bipartite authorship network connects authors with papers. First, each network is ranked independently based on the PageRank paradigm by taking intra-class random walks on the author social network $G_A$ and the paper citation network $G_P$. We refer to this approch as `individual ranking' when executed independently of corank. These two are then coupled by an inter-class random walk by combining the author graph and citation graph with a bipartite authorship graph $G_{AP}$. The Corank approach is evaluated qualitatively by comparing it to other bibliometrics, like publication and coauthor count, and individual author ranking.
+
+
+\paragraph{Intra-class Random Walks}
+A stochastic process satisfies the Markov property if conditioned on the current state, the past state and future state are independent. We consider a random walk on a graph as a Markov chain and can define it as a transition probability matrix where each position $M_{i,j}$ is the conditional probability of jumping to vertex $j$ from the current vertex $i$. If there are no outgoing edges from vertex $i$ in the graph, let $M_{i,j} = \frac{1}{n}$ for all vertices $j$. The entries are nonnegative and every row adds to one. If it is possible to eventually get from every state (vertex) to every other state with some positive probability, it is termed an ergodic Markov chain. Each time step $t$ of the random walk results in a probability distribution vector by taking the dot product of the transition matrix \footnote{We take the transpose of the transition matrix to form a column stochastic matrix because it has an eigenvalue equal to one where the corresponding eigenvector is all postive.} with a probability distribution at time $t-1$, 
+    \begin{equation}
+        m_t = M^Tm_{t-1}.
+    \end{equation}
+
+The probability distribution vector $m$ can be interpreted as an individual ranking score for the vertices of a graph $G_M$ and can be repeatedly computed by a random walk on a transition matrix $M$. In order to guarantee that $M$ is ergodic, we manipulate it with a jump parameter $\alpha$, which denotes the probability of jumping to a vertex chosen uniformly at random instead of taking the random walk step
+    \begin{equation}
+        \tilde{M} = (1-\alpha)M + \frac{\alpha}{|m|} \textbf{1}\textbf{1}^T  
+    \end{equation}
+where $|m|$ is the number of vertices in graph $G_M$. $\alpha$ is similar to the dampening factor used in PageRank to encode the probability that a random surfer will become bored and go to another random page.
+
+The stationary probability of an ergodic Markov chain can be obtained by solving $m = \tilde{M}m$ which involves taking powers of the transition matrix $\tilde{M}$ until $m$ is unchanged, or by solving for the left eigenvector of $\tilde{M}$ corresponding to the eigenvalue of 1 (part of the Perron Frobenius theorem for irreducible matrices). Each intra-class random walk begins with a matrix $M$ based on the graph $G_M$, and is then altered to create $\tilde{M}$ describing the random walk on the graph $G_M$. The intra-class walk occurs within the author network and the paper network. Below, we define matrices $A$ and $P$ formed from the author network and paper networks that are used to rank authors and papers, respectively.
+
+The author social network is constructed by connecting two authors by a weighted edge if they collaborated on a paper. This is computed by first defining two authors' collaboration for a paper for authors $i,j$ and paper $p$:
+    \begin{equation}
+        \tau(i,j,p) = \frac{\mathbb{I}(i,j \in p)}{|p|(|p|+1)/2}    
+    \end{equation}
+where $|p|$ is the number of authors for paper $p$, and then summing the score over all papers to form the symmetric matrix:
+    \begin{equation}
+        T_{i,j} = \sum_{p \in P} \tau(i,j,p).
+    \end{equation}
+
+$T$ is normalized by rows to obtain the transition probability from author $a_i$ to author $a_j$:
+    \begin{equation}
+        Pr(j|i) = A_{i,j} = \frac{T_{i,j}}{\sum_j T_{i,j}}.
+    \end{equation} 
+
+The paper citation network is constructed by connecting two papers with a directed, unweighted edge from $p_i$ to $p_j$ if paper $i$ cites paper $j$. The transition probability from paper $p_i$ to paper $p_j$ is defined as 
+    \begin{equation}
+        Pr(j|i) = P_{i,j} = \frac{\mathbb{I}(i \rightarrow j)}{n_i},
+    \end{equation}
+where $n_i$ is the number of citations of paper $p_i$. A paper that does not cite any papers is given transition probability $\frac{1}{|P|}$.
+
+As explained previously, the individual author ranking scores for vertices of $G_A$ are computed by solving the equation $a = \tilde{A}a$ and the individual paper ranking scores for vertices of $G_P$ are computed by solving the equation $p = \tilde{P}p$.
+
+
+\paragraph{Inter-class Random Walk}
+A heterogeneous graph is created by taking the union of the author graph, citation graph and a bipartite authorship graph. The bipartite authorship network is constructed by connecting an author to a paper he or she has published. It is represented as an adjacency matrix $E_{AP} \in \{0,1\}^{|A| \times |P|}$ where $E_{AP}(i,j) = 1$ indicates that paper $j$ is written by author $i$. The adjacency matrix is then weighted to form the matrix $W_{AP}$ where each $w(i,j)$ entry of the adjacency matrix is divided by the number of authors of the document $j$, or 
+    \begin{equation}
+        w(i,j) = \frac{E_{AP}(i,j)}{|n_j|} = \frac{\mathbb{I}(i \in n_j)}{|n_j|}
+    \end{equation}
+
+Two conditional probability matrices are formed from the weighted matrix when normalizing by either paper or author:
+    \begin{equation}
+        Pr(p_j|a_i) = AP_{i,j} = \frac{w(i,j)}{\sum_k w(i,k)}
+    \end{equation}
+where $AP \in \mathbb{R}^{|A|\times|P|}$ represents the probability of moving from author $i$ to paper $j$, and
+    \begin{equation}
+        Pr(a_i|p_j) = PA_{j,i} = \frac{w(i,j)}{\sum_kw(k,j)}    
+    \end{equation}
+where $PA \in \mathbb{R}^{|P|\times|A|}$ represents the probability of moving from paper $j$ to author $i$. 
+
+The conditional probability matrices $AP$ and $PA$ describe the inter-class random walk that couples the author network and the citation network. An inter-class step jumps from author to paper or paper to author, and changes the probability distribution of $(\mathbf{a},\mathbf{p})$ to $(PA^T\mathbf{p},AP^T\mathbf{a})$. We let each inter-class jump take three substeps. For example an inter-class step from author to paper would involve $(\mathbf{a} \rightarrow \mathbf{p'} \rightarrow \mathbf{a'} \rightarrow \mathbf{p''})$\ and is outlined in Algorithm~\ref{alg:inter}.
+
+    \begin{algorithm}
+        \caption{Inter-walk procedure}
+        \begin{algorithmic}[1]
+        \Function{inter}{$U,V,x$}
+            \State $y \leftarrow U^T x$
+            \State $x \leftarrow V^T y$
+            \State \Return $U^T x$
+        \EndFunction
+        \end{algorithmic}
+        \label{alg:inter}
+    \end{algorithm}
+
+
+\paragraph{Coupling Walks to Corank}
+To compute corank, we repeatedly apply intra-class or inter-class steps on an initial probability distribution for authors and papers. At each time step, a random surfer has the option with probability $\lambda$, the coupling parameter, of either taking an intra-class step or an inter-class step, which can be seen from the two components found in Line~\ref{op0} of Algorithm~\ref{alg:corank}. Without loss of generality, the first term corresponds to an intra-class step of staying within author space and the second term corresponds to an inter-class step of jumping from author to paper space.
+
+    \begin{algorithm}
+        \caption{Corank algorithm}
+        \begin{algorithmic}[1]
+        \Function{corank}{$\tilde{A}, \tilde{P}, AP, PA, \lambda, \epsilon$}
+            \State $\mathbf{a} \leftarrow \frac{1}{|A|}\mathbf{1}$
+            \State $\mathbf{p} \leftarrow \frac{1}{|P|}\mathbf{1}$
+            \While{$|\mathbf{p} - \mathbf{p'}| + |\mathbf{a} - \mathbf{a'}| < \epsilon$}
+                \State $\mathbf{a'} \leftarrow \mathbf{a}$
+                \State $\mathbf{p'} \leftarrow \mathbf{p}$
+                \State $\mathbf{a} \leftarrow (1-\lambda)\tilde{A}^T\mathbf{a'} + \lambda \cdot$ \textsc{inter}($PA,AP,\mathbf{p'}$) \label{op0}
+                \State $\mathbf{p} \leftarrow (1-\lambda)\tilde{P}^T\mathbf{p'} + \lambda \cdot$ \textsc{inter}($AP,PA,\mathbf{a'}$) \label{op1}
+            \EndWhile
+            \State \Return $\mathbf{a}$, $\mathbf{p}$
+        \EndFunction
+        \end{algorithmic}
+        \label{alg:corank}
+    \end{algorithm}
+
+Convergence analysis of $\mathbf{a},\mathbf{d}$ requires showing that the combined random walk is the same as taking iterative powers of an ergodic Markov transition matrix. A block matrix consisting of each component used to calculate $\mathbf{a},\mathbf{d}$ can be constructed and restricting $\alpha > 0$ and $\lambda < 1$ ensures ergodicity of the combined block matrix. Proof of this is beyond the scope of this report but can be consulted in~\cite{zhou2007co} and~\cite{garfield1972citation}.
+
+
+\subsection{MultiRank}
+The multirank framework is a generalization of PageRank that deals with multi-relational data by simultaneously calculating probability distributions on both objects and relations. This generalization is actuated by representing the data in tensor format. In particular, this report focuses on a rectangular tensor represented using a 3D array where each matrix slice of this array corresponds to the adjacency matrix for a single relation. 
+
+The generalized idea is as follows: if there were an infinite number of random surfers in this multi-relational data world, the stable probability distribution is the likelihood that randomly visiting objects using relations will arrive at a particular object via a particular relation. This stationary probability distribution of objects and relations corresponds to the multirank of an object or relation. Like the corank framework, multirank also draws intuition based on the mutual reinforcement principle. An object linked to high multirank objects by high multirank relations would have a high multirank value. Thus, the multirank of an object depends on three factors: (1) the number of objects with which it has relations, (2) the multirank metric of these objects, and (3) the multirank metric of these relations.
+
+\paragraph{Tensor Construction}
+Let $\mathcal{A} = (a_{i_1,i_2,j_1})$ for $i_k=1 \ldots m$; $k=1,2$; $j=1 \ldots n$ be a tensor where $(i_1,i_2)$ are indices for objects and $j_1$ is the index for relations. There is a nonzero in the ($i_1,i_2,j_1$) entry of $\mathcal{A}$ if object $i_1$ is connected to object $i_2$ via the relation $j_1$. 
+Three transition probability tensors $\mathcal{O}=o_{i_1,i_2,j_1}$, $\mathcal{Q}=q_{i_1,i_2,j_1}$ and $\mathcal{R}=r_{i_1,i_2,j_1}$ are formed by normalizing A according to dimension 1,2 (for objects) and 3 (for relations):
+    \begin{equation}
+        \label{eq:o_tensor}
+        \begin{split}
+        o_{i_1,i_2,j_1} &= \frac{a_{i_1,i_2,j_1}}{\sum_{i_1=1}^m a_{i_1,i_2,j_1}} \\
+                        &\cong Pr(X_t=i_1|X_{t-1}=i_2,Y_t=j_1)
+        \end{split}
+    \end{equation}
+
+    \begin{equation}
+        \label{eq:q_tensor}
+        \begin{split}
+        q_{i_1,i_2,j_1} &= \frac{a_{i_1,i_2,j_1}}{\sum_{i_2=1}^m a_{i_1,i_2,j_1}} \\
+                        &\cong Pr(X_t=i_2|X_{t-1}=i_1,Y_t=j_1) 
+        \end{split}
+    \end{equation}
+
+    \begin{equation}
+        \label{eq:r_tensor}
+        \begin{split}
+        r_{i_1,i_2,j_1} &= \frac{a_{i_1,i_2,j_1}}{\sum_{j_1=1}^n a_{i_1,i_2,j_1}} \\
+                        &\cong Pr(Y_t=j_1|X_t=i_1,X_{t-1}=i_2)
+        \end{split}
+    \end{equation}
+
+If the normalizing factor for $\mathcal{O}$ or $\mathcal{Q}$ is zero for all $i_1$ or $i_2$, respectively, then the entries are set to $\frac{1}{m}$. If the normalizing factor for $\mathcal{R}$ is zero for all $j_1$ then the entries are set to $\frac{1}{n}$. These dangling nodes with constant probability mean there is an equal probability to jump to any object or to use any relation. Without loss of generality, $o_{i_1,i_2,j_1}$ can be interpreted as the probability of jumping to object $i_1$ given that object $i_2$ is currently visited and the $j_1$ relation is used; while $r_{i_1,i_2,j_1}$ can be interpreted as the probability of using relation $j_1$ given that object $i_1$ is visited from object $i_2$.
+
+These constructions make it so that each tensor entry value is between between $[0,1]$ and each tensor sums to 1 according to a particular dimension, and can be thought of as a high-dimensional equivalent of the Markov chain transition probability matrices used in the coranking framework.
+
+\paragraph{Probability Calculation}
+We are interested in the multirank, or the stable probability distribution $\mathbf{x} \in \mathbb{R}^m$ for objects and $\mathbf{y} \in \mathbb{R}^n$ for relations. This can be calculated as a prior which requires multiplying the conditional in equation~\ref{eq:o_tensor},~\ref{eq:q_tensor},~\ref{eq:r_tensor} by a joint distribution, and marginalizing accordingly. Using tensor $\mathcal{O}$ as an example:
+
+    \begin{align*}
+            \mathbf{x}_{i_1} &\cong Pr(X_t=i_1) \\
+            &= \sum_{i_2}\sum_{j_1} Pr(X_t=i_1,X_{t-1}=i_2,Y_t=j_1) \\
+            &= \sum_{i_2}\sum_{j_1} Pr(X_t=i_1|X_{t-1}=i_2,Y_t=j_1) \\
+            &\times Pr(X_{t-1}=i_2,Y_t=j_1) \\
+            &= \sum_{i_2}\sum_{j_1} o_{i_1,i_2,j_1} \times Pr(X_{t-1}=i_2,Y_t=j_1) \tag{\theequation}\label{op}
+    \end{align*}
+
+Calculating $Pr(X_t=i_1)$ and $Pr(Y_t=j_1)$ can become quite messy, but by assuming independence for the joint probability in~\eqref{op}, we can more readily calculate each as:
+    \begin{equation}
+        \label{eq:vec_x}
+        x_{i_1} = \sum_{i_2}\sum_{j_1} o_{i_1,i_2,j_1} x_{i_2}y_{j_1},      \quad i_1=1 \ldots m
+    \end{equation}
+
+    \begin{equation}
+        \label{eq:vec_y}
+        y_{j_1} = \sum_{i_1}\sum_{i_2} r_{i_1,i_2,j_1} x_{i_1}x_{i_2},      \quad j_1=1 \ldots n
+    \end{equation}
+
+We find it reasonable to simplify the calculation by assuming this independence because as time goes to infinity, the joint probability can be interpreted as the probability of author $i_2$ publishing in journal $j_1$. This value could be calculated by counting and normalizing the input data extracted from MEDLINE. A complicated alternative to this assumption is described in paragraph~\ref{para:alternative} of Future Work.
+
+\paragraph{Multirank Computation}
+Obtaining the multirank metric then requires solving the tensor equations $\mathbf{x} = \mathcal{O}\mathbf{x'y}$ and $\mathbf{y} = \mathcal{R}\mathbf{x}\mathbf{x'}$, which can be computed iteratively as shown in Algorithm ~\ref{alg:multirank}. This iterative method is analogous to using the power method of a transition matrix, as proposed for individual ranking. 
+
+    \begin{algorithm}
+        \caption{Iterative Multirank Algorithm}
+        \begin{algorithmic}[1]
+        \Function{multi}{$\mathcal{O},\mathcal{R}, \mathbf{x}_0, \mathbf{x'}_0, \mathbf{y}$}
+            \While{$|\mathbf{x}_t - \mathbf{x}_{t-1}| + |\mathbf{x'}_t - \mathbf{x'}_{t-1}| + |\mathbf{y}_t - \mathbf{y}_{t-1}| < \epsilon$}
+                \State $t = t+1$
+                \State $\mathbf{x}_t \leftarrow \mathcal{O} \mathbf{x'}_{t-1} \mathbf{y}_{t-1}$
+                \State $\mathbf{x'}_t \leftarrow \mathcal{Q} \mathbf{x}_{t} \mathbf{y}_{t-1}$
+                \State $\mathbf{y}_t \leftarrow \mathcal{R} \mathbf{x}_t \mathbf{x'}_t$
+            \EndWhile
+            \State \Return $\mathbf{x}_t, \mathbf{y}_t$
+        \EndFunction
+        \end{algorithmic}
+        \label{alg:multirank}
+    \end{algorithm}
+
+Proof of the existence and uniqueness of the stationary probability distributions $\mathbf{x}$ and $\mathbf{y}$ is considered beyond the scope of this report, but can be found in Section 5 of~\cite{ng2011multirank}.

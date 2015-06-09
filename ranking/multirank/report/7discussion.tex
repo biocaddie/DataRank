@@ -1,0 +1,32 @@
+\section{Discussion}
+It is difficult to determine whether Corank or Multirank is a better qualitative fit for our needs as both return sensible author rankings. However, we prefer to explore Multirank further because it is more easily extendable and leads to more hypotheses to test. While we have only explored one connection of author citations through journals, the framework allows for higher order tensor constructions that could capture more relationships and object types. Another reason is because Multirank has no parameters and thus no tuning or justification for parameters. With only three graphs, Corank already has five parameters (three with our simplified approach). Altering it to work with more networks would exponentially increase the number of parameters: just adding an additional network to the existing framework would require another intra-walk parameter, two inter-walk parameters, two coupling parameters, and potentially another dampening factor.
+
+\subsection{Future Work}
+An obvious extension is to combine ranking with clustering by examining the frameworks used in~\cite{sun2009rankclus} and~\cite{varadharajalu2011author}. However, our existing experiements could also be improved by defining different relations. Finally, this work needs to be incorporated into the existing prototype and tested with users. With user testing, we can actually begin to quantify the usefulness of these recommendations. Incorporating this requires scaling the frameworks to include the 20,000 datasets currently used in DataRank. Obtaining this data requires first crawling the GEO repository for the original PMID associated with the dataset, then making the relevant NCBI queries to create the underlying data. It is no surprise that the result of this would be sparse. This sparsity is another reason why we favor Multirank over Corank for the next step of the experimentation as the representation and computation of such sparsity can be more easily implemented with Multirank.
+
+\paragraph{Alternative to Multirank Independence Assumption}
+\label{para:alternative}
+As mentioned previously, in calculating Multirank we assume independence such that the joint probability of $Pr(X_{t-1}=i_2,Y_t=j_1) = Pr(X_{t-1}=i_2)Pr(Y_t=j_1)$. Here we propose an alternative to this assumption by first assuming independence, then separately learning this by calculating $$Pr(X_{t-1}=i_2,Y_t=j_1) = Pr(X_{t-1}=i_2|Y_t=j_1)Pr(Y_t=j_1)$$ Extra notation is needed:
+\begin{table}[h]
+\begin{tabular}{l}
+$\mathcal{O} = Pr(X_1|X_2,Y)$ \\
+$\mathcal{R}=Pr(Y|X_1,X_2)$ \\
+$\mathcal{Q}=Pr(X_2|X_1,Y)$ \\
+$\mathbf{U} = Pr(X_2|Y) = \sum_{i_1} Pr(X_2|X_1,Y) Pr(X_1|Y) = \sum_{i_1} \mathcal{Q}\mathbf{V}$ \\
+$\mathbf{V} = Pr(X_1|Y) = \sum_{i_2} Pr(X_1|X_2,Y) Pr(X_2|Y) =\sum_{i_2} \mathcal{O}\mathbf{U}$ \\
+$\mathbf{Z} = Pr(X_2|X_1) = \sum_j Pr(X_2|X_1,Y) Pr(Y|X_1) =\sum_j \mathcal{Q}\mathbf{W}$ \\
+$\mathbf{W} = Pr(Y|X_1) = \sum_{i_2} Pr(Y|X_1,X_2) Pr(X_2|X_1) =\sum_{i_2} \mathcal{R}\mathbf{Z}$
+\end{tabular}
+\end{table}
+
+First, we run our existing multirank algorithm to get some initial values for $\mathbf{x_1,x_2,y}$. These can be used as the initial values to calculate $\mathbf{U,V,W,Z}$. Lastly, $\mathbf{x_1,y}$ is calculated with by
+\begin{align*}
+    \mathbf{x_1} &= \sum_{i_2}\mathcal{O}\mathbf{Uy} = \mathbf{Vy} \\
+    \mathbf{y} &= \sum_{i_2}\mathcal{R}\mathbf{Zx_1} = \mathbf{Wx_1}
+\end{align*}
+These last two subprocesses would be repeated until convergence of $\mathbf{x_1,y}$.
+
+\paragraph{Multirank Relations to Explore}
+Some other relations to explore to get more variability in relation multiranking include using MeSH terms or datasets as relation instead of journal. By looking at citation counts for top multiranked authors to top datasets, one could potentially locate clusters to see if particular authors act more as dataset or methodology contributors or dataset curators. Other connections to explore would be author collaborations rather than author citations. The results of these could be compared to see which journals (or datasets or MeSH terms) may lead to more collaboration versus citations.
+
+Additionally, for every dataset, one could create an author by author collaboration matrix to get conditional proability of authors given dataset and compare this result with our conditional probability tables. While this would not be difficult to implement, it would require different NCBI querying than what was already completed for these experiments in order to generate the underlying experimental data. 
