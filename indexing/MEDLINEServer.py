@@ -26,12 +26,12 @@ class MEDLINEServer:
     
     @staticmethod
     def getStrFromDate(date):
-        return '{}/{}/{}'.format(date.year,date.month,date.day)
+        return '{:04}/{:02}/{:02}'.format(date.year,date.month,date.day)
     
     @staticmethod
     def getDate(path , today=False):
         if today:
-            now = datetime.date.today()- datetime.timedelta(20000) # from begining to yesterday
+            now = datetime.date.today()- datetime.timedelta(1) # update until yestedray
             return (now) 
         else:
             files = [ f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
@@ -41,31 +41,6 @@ class MEDLINEServer:
                     dates.append(MEDLINEServer.getDateFromStr(f[5:-4].split('_to_')[1].replace('_','/')))
             return (max(dates)+datetime.timedelta(1)) # from the day after last update
             
-    
-    
-    @staticmethod
-    def writePMID(f,query):
-        handle = Entrez.esearch(db='pubmed',term=query, retmax=100000)
-        records = Entrez.read(handle)
-        handle.close()
-        records = map(int,records['IdList'])
-        for rec in records:
-            print >> f, rec
-    
-    @staticmethod
-    def getQueries(start,end):
-        global TOTAL
-        query="(\"{}\"[Date - Entrez] : \"{}\"[Date - Entrez])".format(MEDLINEServer.getStrFromDate(start),MEDLINEServer.getStrFromDate(end))
-        handle = Entrez.esearch(db='pubmed',term=query,retmax=1)
-        total = int(Entrez.read(handle)['Count'])
-        if total<=100000:
-            TOTAL+=total
-            return query
-        else:
-            mid=(end-start).days/2
-            print '({},{}) -> ({},{}) + ({},{})'.format(start,end, start, start + datetime.timedelta(mid), start+ datetime.timedelta(mid), end),mid,total
-            return [MEDLINEServer.getQueries(start, start + datetime.timedelta(mid-1)), MEDLINEServer.getQueries(start+ datetime.timedelta(mid), end)]
-    
     @staticmethod
     def updatePMIDs(path='/home/arya/PubMed/PMID/'):
         if not os.path.exists(path):            os.makedirs(path)
@@ -75,13 +50,38 @@ class MEDLINEServer:
         fname=path+'pmid_'+query.replace('/', '_').replace('"','').replace(' : ','_to_').replace('[Date - Entrez]','').replace('(','').replace(')','')+'.txt'
         handle = Entrez.esearch(db='pubmed',term=query,retmax=1)
         total = int(Entrez.read(handle)['Count'])
-        print query ,total
-        queries = flatten(MEDLINEServer.getQueries(start, end))
+        print 'Total of',total, 'is found from the query',query
+        batch_size=100000
+        num_batches= total/batch_size
+        if not total:
+            return
         with open(fname,'w') as f:
-            for query in queries:
-                MEDLINEServer.writePMID(f, query)
-        print '\nTotal of {} records fetched from query and total of {} is written to file.'.format(total,len(open(fname).readlines()))
-        print TOTAL 
+            for j in range(num_batches+1):
+                handle = Entrez.esearch(db='pubmed',term=query, retmax=batch_size,retstart=j*batch_size)
+                records = Entrez.read(handle)
+                handle.close()
+                records = map(int,records['IdList'])
+                for rec in records:
+                    print >> f, rec
+    
+    @staticmethod 
+    def loadPMIDs(path):
+        files = [ f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
+        dates = np.array([])
+        fnames= np.array([])
+        for f in files:
+            if  f[:5]=='pmid_' and f[-4:]=='.txt':
+                dates=np.append(dates, f[5:-4].split('_to_')[1].replace('_','/'))
+                fnames=np.append(fnames,f)
+        indices = range(len(fnames))
+        indices.sort(lambda x,y: cmp(dates[x], dates[y]))
+        PMID=[]
+        for f in fnames[indices]:
+            PMID+= open(path+ f).readlines()
+#             PMID+= map(lambda x: int(x.strip()), open(path+ f).readlines())
+#         PMID=MEDLINEServer.removeDuplicates(PMID)
+        print '{} PMID is returned until {}'.format(len(PMID), dates[indices][-1])
+        return np.array(PMID)
     
     @staticmethod
     def getNumRecsordsInBatch(fname):
@@ -130,33 +130,34 @@ class MEDLINEServer:
     def saveBatch(pmidList,outPath):
         pmidList=','.join(pmidList)
         if os.path.exists(outPath):
-            print  'Batch File Name Exist!',outPath
-            return
+            try:
+                n =MEDLINEServer.getNumRecsordsInBatch(outPath)
+                print  'Skipping Batch {} , which has {} records.'.format(outPath, n)
+                if n ==10000:
+                    return
+            except:
+                pass
         handle = Entrez.efetch(db='pubmed',id=pmidList, retmode="xml")
         with open(outPath,'w') as f:
             for line in handle.readlines():
                 print >>f, line,
-        
+    
     @staticmethod
-    def saveMEDLINE(path='/home/arya/PubMed/', pmidFile='pmid_1800_01_01_to_2015_06_09.txt',num_threads=20):
+    def saveMEDLINE(path='/home/arya/PubMed/', num_threads=20):
+        PMID=MEDLINEServer.loadPMIDs(path+'PMID/')
         outPath=path+'MEDLINE/'
-        if not os.path.exists(outPath):
-            os.makedirs(outPath)
+        if not os.path.exists(outPath): os.makedirs(outPath)
         outPath+='raw/'
-        if not os.path.exists(outPath):
-            os.makedirs(outPath)
-        savedBatches = [ f for f in os.listdir(outPath) if os.path.isfile(os.path.join(outPath,f)) ]
-        pmidpath= path+pmidFile
-        PMID=np.array(open(pmidpath).readlines())
+        if not os.path.exists(outPath): os.makedirs(outPath)
         N = len(PMID)
         batch_size=10000
         num_batches= N/batch_size  +1
         print 'Num PMIDs: {}    Num Batches: {}    Num Threads: {}'.format(N,num_batches, num_threads)
-        exit()
         from multiprocessing import Pool
         params=[{'pmidList':PMID[range(j*batch_size, min((j+1)*batch_size,N))] , 'outPath' : outPath + 'batch_{}.xml'.format(j)} for j in range(num_batches)]
         pool = Pool(num_threads)
         pool.map(saveBatchHelper,params)
+        pool.terminate()
             
     
     @staticmethod
@@ -211,6 +212,5 @@ class MEDLINEServer:
     
 if __name__ == '__main__':
     MEDLINEServer.updatePMIDs()
-#     MEDLINEServer.saveMEDLINE()
-#     MEDLINEServer.parseBatch('/home/arya/PubMed/MEDLINE/raw/batch_916.xml')
+    MEDLINEServer.saveMEDLINE()
     print 'Done!'
