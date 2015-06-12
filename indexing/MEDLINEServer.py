@@ -159,7 +159,11 @@ class MEDLINEServer:
         pool.map(saveBatchHelper,params)
         pool.terminate()
             
-    
+    @staticmethod
+    def update():
+        MEDLINEServer.updatePMIDs()
+        MEDLINEServer.saveMEDLINE()
+        
     @staticmethod
     def batchParamForDatabase():
         return {'pmid':[],
@@ -178,19 +182,18 @@ class MEDLINEServer:
                 'mid':[],
                 'DataBankList':[]
                 }
-    @staticmethod
-    def parseBatch(path):
+def parseBatch(path):
 #         dbpath=outdir+'medline.db'
-        param=MEDLINEServer.batchParamForDatabase()
-        with open(path) as f:
+#     param=MEDLINEServer.batchParamForDatabase()
+#     with open(path) as f:
 #             f = Entrez.efetch(db='pubmed',id='26053938', retmode="xml")
 #             f = Entrez.efetch(db='pubmed',id='23817699', retmode="xml")
 #             f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
-            records = Entrez.parse(f)
-            i=0
-            for record in records:
-                i+=1
-            print i
+        records = Entrez.parse(f)
+        i=0
+        for record in records:
+            i+=1
+        print i
 #                 param['pmid'].append(record['MedlineCitation']['PMID'])
 #                 try:
 #                     param['abstract'].append(record['MedlineCitation']['Article']['Abstract']['AbstractText'][0])
@@ -209,8 +212,91 @@ class MEDLINEServer:
 #                 param['jid'].append(record['MedlineCitation']['MedlineJournalInfo']['NlmUniqueID'])
 #                 param['issn'].append(record['MedlineCitation']['MedlineJournalInfo']['ISSNLinking'])
 #                 break
-    
+
+def add_record(param,record):
+    param['pmid'].append(record['MedlineCitation']['PMID'])
+    try:
+        param['abstract'].append(record['MedlineCitation']['Article']['Abstract']['AbstractText'][0])
+        param['abstractLength'].append(len(record['MedlineCitation']['Article']['Abstract']['AbstractText'][0]))
+    except KeyError:
+        param['abstract'].append('')
+        param['abstractLength'].append(0)
+    param['DataBankList'].append(record['MedlineCitation']['Article']['DataBankList'])
+    param['title'].append(record['MedlineCitation']['Article']['ArticleTitle'])
+    param['date'].append(record['MedlineCitation']['Article']['Journal']['JournalIssue']['PubDate'])
+    param['lang'].append(record['MedlineCitation']['Article']['Language'])
+    param['mesh'].append(record['MedlineCitation']['MeshHeadingList'])
+    param['author'].append(record['MedlineCitation']['Article']['AuthorList'][0])
+    param['journal'].append(record['MedlineCitation']['MedlineJournalInfo']['MedlineTA'])
+    param['country'].append(record['MedlineCitation']['MedlineJournalInfo']['Country'])
+    param['jid'].append(record['MedlineCitation']['MedlineJournalInfo']['NlmUniqueID'])
+    param['issn'].append(record['MedlineCitation']['MedlineJournalInfo']['ISSNLinking'])
+
+def parseRecords(records,PD,RD):
+    param=MEDLINEServer.batchParamForDatabase()
+    for record in records:
+        rec=record['MedlineCitation']
+        try:
+            for d in rec['Article']['DataBankList']:
+                for a in d['AccessionNumberList']:
+                    try:
+                        PD[str(rec['PMID'])].append(str(d['DataBankName'])+'/'+str(a))
+                    except:
+                        PD[str(rec['PMID'])]=[str(d['DataBankName'])+'/'+str(a)]
+                    try:
+                        RD[str(d['DataBankName'])].append(str(a))
+                    except:
+                        RD[str(d['DataBankName'])]=[str(a)]
+        except:
+            pass
+    return PD,RD
+#         param =  add_record(param, record['MedlineCitation'] )
+
+
+def mesh():
+    from meshparse import parse_mesh 
+#     path='/home/arya/PubMed/MeSH/sample.xml'
+    path='/home/arya/PubMed/MeSH/desc2015.xml'
+    records=parse_mesh(path)
+    Mnames=[]
+    Cnames=[]
+    Tnames=[]
+    MID=[]
+    CID=[]
+    TID=[]
+    for r in records:
+        MID.append(r.ui)
+        Mnames.append(r.name)
+        if r.ui=='D001205':
+            print r.ui, r.name
+        for c in r.concepts:
+            CID.append(c.ui)
+            Cnames.append(c.name)
+            for t in c.terms:
+                Tnames.append(t.name)
+                TID.append(t.ui)
+            
+        
+    print len(MID),len(Mnames)
+    print len((CID)),len((Cnames))
+    print len(set(CID)),len(set(Cnames))
+    print len((TID)),len((Tnames))
+    print len(set(TID)),len(set(Tnames))
+
+import pickle
 if __name__ == '__main__':
-    MEDLINEServer.updatePMIDs()
-    MEDLINEServer.saveMEDLINE()
+    
+#     f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
+    PD,RD={},{}
+    for j in range(2499):
+        f=open('/home/arya/PubMed/MEDLINE/raw/batch_{}.xml'.format(j))
+        records = Entrez.parse(f)
+        PD,RD=parseRecords(records,PD,RD)
+        pickle.dump({'PD':PD, 'RD':RD, 'iter':j},open('/home/arya/data.pkl', 'w'))
+    
+    
+#     print MEDLINEServer.getNumRecsordsInBatch(fname)
+#     MEDLINEServer.updatePMIDs()
+#     MEDLINEServer.saveMEDLINE()
+    
     print 'Done!'
