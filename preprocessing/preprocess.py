@@ -409,14 +409,14 @@ def parse_database(param):
     Abstracts, DTs, IDs=[],[], [] # Buffer
     while 1:
         j+=1
-        rec=db_conn.getRawROW() # get a row from source database process it and insert it to destination database
-        if rec is None:
+        record=db_conn.getRawROW() # get a row from source database process it and insert it to destination database
+        if record is None:
             break
-        ID,abs = rec[0], rec[1]
+        ID,abs = record[0], record[1]
         if 'parse' in param['pipeline']:
-            ID,abs = rec[0], parse(abs)
+            ID,abs = record[0], parse(abs)
 #         if 'clean' in param['pipeline']:
-#             ID,abs = rec[0], clean(abs)
+#             ID,abs = record[0], clean(abs)
         dic, DT= insertToDic(dic, abs)
         IDs.append(ID)
         Abstracts.append(abs)

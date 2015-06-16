@@ -2,7 +2,8 @@ from Bio import Entrez
 import os
 import numpy as np
 import datetime
-from Bio.DocSQL import Query
+from multiprocessing import Pool
+import sys
 Entrez.email="a@a.com"
 TOTAL=0
 def flatten(iterable):
@@ -153,7 +154,7 @@ class MEDLINEServer:
         batch_size=10000
         num_batches= N/batch_size  +1
         print 'Num PMIDs: {}    Num Batches: {}    Num Threads: {}'.format(N,num_batches, num_threads)
-        from multiprocessing import Pool
+        
         params=[{'pmidList':PMID[range(j*batch_size, min((j+1)*batch_size,N))] , 'outPath' : outPath + 'batch_{}.xml'.format(j)} for j in range(num_batches)]
         pool = Pool(num_threads)
         pool.map(saveBatchHelper,params)
@@ -182,18 +183,18 @@ class MEDLINEServer:
                 'mid':[],
                 'DataBankList':[]
                 }
-def parseBatch(path):
-#         dbpath=outdir+'medline.db'
-#     param=MEDLINEServer.batchParamForDatabase()
-#     with open(path) as f:
-#             f = Entrez.efetch(db='pubmed',id='26053938', retmode="xml")
-#             f = Entrez.efetch(db='pubmed',id='23817699', retmode="xml")
-#             f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
-        records = Entrez.parse(f)
-        i=0
-        for record in records:
-            i+=1
-        print i
+# def parseBatch(path):
+# #         dbpath=outdir+'medline.db'
+# #     param=MEDLINEServer.batchParamForDatabase()
+# #     with open(path) as f:
+# #             f = Entrez.efetch(db='pubmed',id='26053938', retmode="xml")
+# #             f = Entrez.efetch(db='pubmed',id='23817699', retmode="xml")
+# #             f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
+#         records = Entrez.parse(f)
+#         i=0
+#         for record in records:
+#             i+=1
+#         print i
 #                 param['pmid'].append(record['MedlineCitation']['PMID'])
 #                 try:
 #                     param['abstract'].append(record['MedlineCitation']['Article']['Abstract']['AbstractText'][0])
@@ -232,24 +233,36 @@ def add_record(param,record):
     param['jid'].append(record['MedlineCitation']['MedlineJournalInfo']['NlmUniqueID'])
     param['issn'].append(record['MedlineCitation']['MedlineJournalInfo']['ISSNLinking'])
 
-def parseRecords(records,PD,RD):
-    param=MEDLINEServer.batchParamForDatabase()
+def parseBatch(path):
+    PD,RD={},{}
+    f=open(path)
+    records = Entrez.parse(f)
     for record in records:
-        rec=record['MedlineCitation']
-        try:
-            for d in rec['Article']['DataBankList']:
-                for a in d['AccessionNumberList']:
-                    try:
-                        PD[str(rec['PMID'])].append(str(d['DataBankName'])+'/'+str(a))
-                    except:
-                        PD[str(rec['PMID'])]=[str(d['DataBankName'])+'/'+str(a)]
-                    try:
-                        RD[str(d['DataBankName'])].append(str(a))
-                    except:
-                        RD[str(d['DataBankName'])]=[str(a)]
-        except:
-            pass
-    return PD,RD
+        if 'MedlineCitation' in record.keys():
+            rec=record['MedlineCitation']
+            if 'Article' in rec.keys():
+                if 'DataBankList' in rec['Article'].keys():
+                    for d in rec['Article']['DataBankList']:
+    #                     if str(rec['PMID']) in PD.keys(): #updating a record (to be tested)
+    #                         for ds in PD[str(rec['PMID'])]:
+    #                             repository,accession= ds.spli('/')
+    #                             del(RD[repository][RD[repository].index(accession)])
+    #                             PD[str(rec['PMID'])]=[]
+                        for a in d['AccessionNumberList']:
+                            accession=str.decode(a,'unicode-escape')
+                            repository = str.decode(d['DataBankName'],'unicode-escape')
+                            val=repository+'/'+accession
+                            try:
+                                PD[str(rec['PMID'])].append(val)
+                            except:
+                                PD[str(rec['PMID'])]=[val]
+                            try:
+                                RD[repository].append(accession)
+                            except:
+                                RD[repository]=[accession]
+    print path 
+    sys.stdout.flush()
+    return {'PD':PD,'RD':RD}
 #         param =  add_record(param, record['MedlineCitation'] )
 
 
@@ -283,20 +296,91 @@ def mesh():
     print len((TID)),len((Tnames))
     print len(set(TID)),len(set(Tnames))
 
+
+def process_data_stats(path=None, data=None):
+    if data is None:    data=pickle.load(open(path))
+    else: data['iter']=0
+#     with open(path.replace('.pkl','.log'),'a') as f:
+    print  '************************************************'
+    print  '{:20}{:10}{:10}'.format('Repository','#Datasets', '#Uniques')
+    rd = sorted(map(lambda (k,v): (k,len(v),len(set(v))),data['RD'].items()),key=lambda x: x[1],reverse=True)
+    for [k,u,v] in rd:    print  '{:20}{:10}{:10}'.format(k,u,v)
+    print  '-------------------------------\n{:20}{:10}{:10}\n'.format('Total',sum(map(lambda (k,u,v):u,rd)),sum(map(lambda (k,u,v):v,rd)))
+    print  'Until Batch {:5}, {:7} datasets are found {:7} papers'.format(data['iter'], sum(map(len,data['PD'].values())),len(data['PD'].keys()))
+    
+# def bipartite(path='/home/arya/PubMed/'):    
+#     num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
+#     fileout=path+'Datasets/bipartite.pkl'
+#     try:
+#         data=pickle.load(open(fileout))
+#         PD,RD,start=data['PD'],data['RD'],data['iter']+1
+#         open(fileout.replace('.pkl','.log'),'w')
+#         print 'Resuming from batch', start
+#     except:
+#         PD,RD,start={},{},0
+#     for j in range(start,num_batches):
+#         try:
+#             f=open(path+'MEDLINE/raw/batch_{}.xml'.format(j))
+#             records = Entrez.parse(f)
+#             PD,RD=parseBatch(records,PD,RD)
+#             pickle.dump({'PD':PD, 'RD':RD, 'iter':j},open(fileout, 'w'))
+#             process_data_stats(fileout)
+#         except Exception:
+#             import traceback
+#             print(traceback.format_exc())
+#             print 'error reading or parsing batch' ,j
+#             with open(fileout.replace('.pkl','.err'),'a') as f:
+#                 print >>f,j
+
+
+def mergeBipartiteBatchResults(results):
+    PD,RD={},{}
+    for batch in results:
+        PD.update(batch['PD'])
+        for k,v in batch['RD'].items():
+            if k in RD.keys():
+                for i in v:
+                    RD[k].append(i)
+            else:
+                RD[k]=v
+    return {'PD':PD,'RD':RD}
+
+
+def bipartite(path='/home/arya/PubMed/',num_threads=20):    
+    num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
+    fileout=path+'Datasets/bipartite.pkl'
+    sys.stdout = open(fileout.replace('.pkl','.log'),'w')
+    sys.stderr = open(fileout.replace('.pkl','.err'),'w')
+    start=0
+#     num_batches=start+10
+    param=[path+'MEDLINE/raw/batch_{}.xml'.format(j) for j in range(start, num_batches)]
+    pool = Pool(num_threads)
+    results=pool.map(parseBatch,param)
+    pool.terminate()
+#     pickle.dump(results,open(fileout,'w'))
+#     results = pickle.load(open(fileout))
+    print '\nMerging...\n'
+    results = mergeBipartiteBatchResults(results)
+    process_data_stats( data=results)
+    
+    
+    
+        
+                
+            
+        
 import pickle
 if __name__ == '__main__':
-    
-#     f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
-    PD,RD={},{}
-    for j in range(2499):
-        f=open('/home/arya/PubMed/MEDLINE/raw/batch_{}.xml'.format(j))
-        records = Entrez.parse(f)
-        PD,RD=parseRecords(records,PD,RD)
-        pickle.dump({'PD':PD, 'RD':RD, 'iter':j},open('/home/arya/data.pkl', 'w'))
-    
-    
+    from time import time
+    s=time()
+#    f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
+#    records = Entrez.parse(f)
+#    for r  in records:
+#        print r
+    bipartite()
+#     process_data_stats()
 #     print MEDLINEServer.getNumRecsordsInBatch(fname)
 #     MEDLINEServer.updatePMIDs()
 #     MEDLINEServer.saveMEDLINE()
     
-    print 'Done!'
+    print 'Done in {:.0f} minutes!'.format((time()-s)/60)

@@ -122,11 +122,11 @@ class dbConnector():
                 docsOfTerm= self.dstcur.fetchone()
 
                 if docsOfTerm is None: # new term
-                    rec =str(docs)
-                    self.dstcur.execute('INSERT INTO td(ID, docs) VALUES (?, ?)', (termID,rec));
+                    record =str(docs)
+                    self.dstcur.execute('INSERT INTO td(ID, docs) VALUES (?, ?)', (termID,record));
                 else:
-                    rec=str(dict(eval(docsOfTerm[0]).items()+docs.items()))
-                    self.dstcur.execute("UPDATE td SET docs = ? WHERE ID= ? """,(rec,termID))
+                    record=str(dict(eval(docsOfTerm[0]).items()+docs.items()))
+                    self.dstcur.execute("UPDATE td SET docs = ? WHERE ID= ? """,(record,termID))
         
         if not len(dic):
             return
