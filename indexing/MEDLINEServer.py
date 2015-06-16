@@ -4,6 +4,7 @@ import numpy as np
 import datetime
 from multiprocessing import Pool
 import sys
+import traceback
 Entrez.email="a@a.com"
 TOTAL=0
 def flatten(iterable):
@@ -183,7 +184,7 @@ class MEDLINEServer:
                 'mid':[],
                 'DataBankList':[]
                 }
-# def parseBatch(path):
+# def parseBatchDataset(path):
 # #         dbpath=outdir+'medline.db'
 # #     param=MEDLINEServer.batchParamForDatabase()
 # #     with open(path) as f:
@@ -233,68 +234,73 @@ def add_record(param,record):
     param['jid'].append(record['MedlineCitation']['MedlineJournalInfo']['NlmUniqueID'])
     param['issn'].append(record['MedlineCitation']['MedlineJournalInfo']['ISSNLinking'])
 
-def parseBatch(path):
+def parseBatchDataset(path):
     PD,RD={},{}
     f=open(path)
-    records = Entrez.parse(f)
-    for record in records:
-        if 'MedlineCitation' in record.keys():
-            rec=record['MedlineCitation']
-            if 'Article' in rec.keys():
-                if 'DataBankList' in rec['Article'].keys():
-                    for d in rec['Article']['DataBankList']:
-    #                     if str(rec['PMID']) in PD.keys(): #updating a record (to be tested)
-    #                         for ds in PD[str(rec['PMID'])]:
-    #                             repository,accession= ds.spli('/')
-    #                             del(RD[repository][RD[repository].index(accession)])
-    #                             PD[str(rec['PMID'])]=[]
-                        for a in d['AccessionNumberList']:
-                            accession=str.decode(a,'unicode-escape')
-                            repository = str.decode(d['DataBankName'],'unicode-escape')
-                            val=repository+'/'+accession
-                            try:
-                                PD[str(rec['PMID'])].append(val)
-                            except:
-                                PD[str(rec['PMID'])]=[val]
-                            try:
-                                RD[repository].append(accession)
-                            except:
-                                RD[repository]=[accession]
+    try:
+        records = Entrez.parse(f)
+        for record in records:
+            if 'MedlineCitation' in record.keys():
+                rec=record['MedlineCitation']
+                if 'Article' in rec.keys():
+                    if 'DataBankList' in rec['Article'].keys():
+                        for d in rec['Article']['DataBankList']:
+        #                     if str(rec['PMID']) in PD.keys(): #updating a record (to be tested)
+        #                         for ds in PD[str(rec['PMID'])]:
+        #                             repository,accession= ds.spli('/')
+        #                             del(RD[repository][RD[repository].index(accession)])
+        #                             PD[str(rec['PMID'])]=[]
+                            for a in d['AccessionNumberList']:
+                                accession=str.decode(a,'unicode-escape')
+                                repository = str.decode(d['DataBankName'],'unicode-escape')
+                                val=repository+'/'+accession
+                                try:
+                                    PD[str(rec['PMID'])].append(val)
+                                except:
+                                    PD[str(rec['PMID'])]=[val]
+                                try:
+                                    RD[repository].append(accession)
+                                except:
+                                    RD[repository]=[accession]
+    except:
+        print >> sys.stderr, '{}\n{}\n***********'.format(path,traceback.format_exc())
     print path 
     sys.stdout.flush()
     return {'PD':PD,'RD':RD}
 #         param =  add_record(param, record['MedlineCitation'] )
 
+class Parse:
 
-def mesh():
-    from meshparse import parse_mesh 
-#     path='/home/arya/PubMed/MeSH/sample.xml'
-    path='/home/arya/PubMed/MeSH/desc2015.xml'
-    records=parse_mesh(path)
-    Mnames=[]
-    Cnames=[]
-    Tnames=[]
-    MID=[]
-    CID=[]
-    TID=[]
-    for r in records:
-        MID.append(r.ui)
-        Mnames.append(r.name)
-        if r.ui=='D001205':
-            print r.ui, r.name
-        for c in r.concepts:
-            CID.append(c.ui)
-            Cnames.append(c.name)
-            for t in c.terms:
-                Tnames.append(t.name)
-                TID.append(t.ui)
+    @staticmethod
+    def MeSH():
+        from meshparse import parse_mesh 
+    #     path='/home/arya/PubMed/MeSH/sample.xml'
+        path='/home/arya/PubMed/MeSH/desc2015.xml'
+        records=parse_mesh(path)
+        Mnames=[]
+        Cnames=[]
+        Tnames=[]
+        MID=[]
+        CID=[]
+        TID=[]
+        for r in records:
+            MID.append(r.ui)
+            Mnames.append(r.name)
+            if r.ui=='D001205':
+                print r.ui, r.name
+            for c in r.concepts:
+                CID.append(c.ui)
+                Cnames.append(c.name)
+                for t in c.terms:
+                    Tnames.append(t.name.strip())
+                    TID.append(t.ui)
+                
             
-        
-    print len(MID),len(Mnames)
-    print len((CID)),len((Cnames))
-    print len(set(CID)),len(set(Cnames))
-    print len((TID)),len((Tnames))
-    print len(set(TID)),len(set(Tnames))
+        print 'mesh', len(MID),len(Mnames)
+        print 'concept',len((CID)),len((Cnames))
+        print 'Unique concept',len(set(CID)),len(set(Cnames))
+        print len((TID)),len((Tnames))
+        print len(set(TID)),len(set(Tnames))
 
 
 def process_data_stats(path=None, data=None):
@@ -322,7 +328,7 @@ def process_data_stats(path=None, data=None):
 #         try:
 #             f=open(path+'MEDLINE/raw/batch_{}.xml'.format(j))
 #             records = Entrez.parse(f)
-#             PD,RD=parseBatch(records,PD,RD)
+#             PD,RD=parseBatchDataset(records,PD,RD)
 #             pickle.dump({'PD':PD, 'RD':RD, 'iter':j},open(fileout, 'w'))
 #             process_data_stats(fileout)
 #         except Exception:
@@ -355,7 +361,7 @@ def bipartite(path='/home/arya/PubMed/',num_threads=20):
 #     num_batches=start+10
     param=[path+'MEDLINE/raw/batch_{}.xml'.format(j) for j in range(start, num_batches)]
     pool = Pool(num_threads)
-    results=pool.map(parseBatch,param)
+    results=pool.map(parseBatchDataset,param)
     pool.terminate()
 #     pickle.dump(results,open(fileout,'w'))
 #     results = pickle.load(open(fileout))
@@ -365,7 +371,11 @@ def bipartite(path='/home/arya/PubMed/',num_threads=20):
     
     
     
-        
+def createMEDLINEDB(scriptPath='/home/arya/workspace/biocaddie/indexing/MEDLINE_create.sql',outPath='/home/arya/PubMed/MEDLINE.db'):
+    import subprocess
+    cmd= 'sqlite3 {} < {}'.format(outPath,scriptPath )
+    subprocess.call(cmd,shell=True)
+    
                 
             
         
@@ -373,11 +383,12 @@ import pickle
 if __name__ == '__main__':
     from time import time
     s=time()
+    Parse.MeSH()
 #    f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
 #    records = Entrez.parse(f)
 #    for r  in records:
 #        print r
-    bipartite()
+#     bipartite()
 #     process_data_stats()
 #     print MEDLINEServer.getNumRecsordsInBatch(fname)
 #     MEDLINEServer.updatePMIDs()
