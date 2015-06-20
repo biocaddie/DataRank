@@ -53,16 +53,13 @@ class MEDLINEParser:
         
     @staticmethod
     def mergeDatasetBatchResults(results):
-        PD,RD={},{}
-        for batch in results:
-            PD.update(batch['PD'])
-            for k,v in batch['RD'].items():
-                if k in RD.keys():
-                    for i in v:
-                        RD[k].append(i)
-                else:
-                    RD[k]=v
-        return {'PD':PD,'RD':RD}
+        from MEDLINEDatabase import MEDLINEDatabase
+        DB=MEDLINEDatabase()
+        for db in results:
+            DB.paper_dataset+=db.paper_dataset
+            DB.dataset += db.dataset
+        DB.dataset.remove_duplicates()
+        return DB
     
     @staticmethod
     def Parse(path='/home/arya/PubMed/',num_threads=20, ParseFullMEDLINE=True):
@@ -72,42 +69,52 @@ class MEDLINEParser:
         fileout=path+'Datasets/{}.pkl'.format(('datasets','MEDLINE')[ParseFullMEDLINE])
         sys.stdout = open(fileout.replace('.pkl','.log'),'w')
         sys.stderr = open(fileout.replace('.pkl','.err'),'w')
-        start=0
+        start=2000
+        num_batches=2020
         pool = Pool(num_threads)
         if ParseFullMEDLINE:
             meshdb=MEDLINEParser.MeSH()
             param=[{'path':path+'MEDLINE/raw/batch_{}.xml'.format(j), 'meshdb':meshdb} for j in range(start, num_batches)]
             db=pool.map(parseBatchMEDLINE_helper,param)
         else:
-            param=[path+'MEDLINE/raw/batch_{}.xml'.format(j) for j in range(start, num_batches)]
+            param=[{'path':path+'MEDLINE/raw/batch_{}.xml'.format(j) for j in range(start, num_batches)}]
             db=pool.map(parseBatchDataset_helper,param)
         pool.terminate()
         print '\nMerging...\n'
         db = MEDLINEParser.mergeDatasetBatchResults(db)
-        MEDLINEParser.dataset_stats( data=db)
+#         MEDLINEParser.dataset_stats( data=db)
         pickle.dump(db,open(fileout,'w'))
         
-        
-        
-
                 
 
+#     @staticmethod
+#     def dataset_stats(path=None, data=None):
+#         if data is None:    data=pickle.load(open(path))
+#         else: data['iter']=0
+#     #     with open(path.replace('.pkl','.log'),'a') as f:
+#         print  '************************************************'
+#         print  '{:20}{:10}{:10}'.format('Repository','#Datasets', '#Uniques')
+#         rd = sorted(map(lambda (k,v): (k,len(v),len(set(v))),data['RD'].items()),key=lambda x: x[1],reverse=True)
+#         for [k,u,v] in rd:    print  '{:20}{:10}{:10}'.format(k,u,v)
+#         print  '-------------------------------\n{:20}{:10}{:10}\n'.format('Total',sum(map(lambda (k,u,v):u,rd)),sum(map(lambda (k,u,v):v,rd)))
+#         print  'Until Batch {:5}, {:7} datasets are found {:7} papers'.format(data['iter'], sum(map(len,data['PD'].values())),len(data['PD'].keys()))
+    
     @staticmethod
     def dataset_stats(path=None, data=None):
         if data is None:    data=pickle.load(open(path))
         else: data['iter']=0
-    #     with open(path.replace('.pkl','.log'),'a') as f:
+        db=data['db']
         print  '************************************************'
         print  '{:20}{:10}{:10}'.format('Repository','#Datasets', '#Uniques')
+        
+        
         rd = sorted(map(lambda (k,v): (k,len(v),len(set(v))),data['RD'].items()),key=lambda x: x[1],reverse=True)
         for [k,u,v] in rd:    print  '{:20}{:10}{:10}'.format(k,u,v)
         print  '-------------------------------\n{:20}{:10}{:10}\n'.format('Total',sum(map(lambda (k,u,v):u,rd)),sum(map(lambda (k,u,v):v,rd)))
-        print  'Until Batch {:5}, {:7} datasets are found {:7} papers'.format(data['iter'], sum(map(len,data['PD'].values())),len(data['PD'].keys()))
-    
-    
+        print  'Until Batch {:5}, {:7} datasets are found {:7} papers'.format(data['iter'], sum(map(len,data['PD'].values())),len(data['PD'].keys())) 
+        
     @staticmethod
     def parseBatchDataset(path):
-#         PD,RD={},{}
         from MEDLINEDatabase import MEDLINEDatabase
         db=MEDLINEDatabase()
         f=open(path)
@@ -122,15 +129,9 @@ class MEDLINEParser:
                                 for a in d['AccessionNumberList']:
                                     accession=str.decode(a,'unicode-escape')
                                     repository = str.decode(d['DataBankName'],'unicode-escape')
-                                    val=repository+'/'+accession
-                                    try:
-                                        db.paper_dataset[str(rec['PMID'])].append(val)
-#                                         PD[str(rec['PMID'])].append(val)
-                                    except:
-                                        db.paper_dataset[str(rec['PMID'])]=[val]
-#                                         PD[str(rec['PMID'])]=[val]
-                                    if repository not in db.dataset.repository.name: 
-                                        db.dataset.repository.name
+                                    db.dataset.insert(repository, accession)
+                                    paper_id=str(rec['PMID'])
+                                    db.paper_dataset.insert( paper_id, db.dataset.id[-1])
         except:
             print >> sys.stderr, '{}\n{}\n***********'.format(path,traceback.format_exc())
         print path 
@@ -152,14 +153,6 @@ class MEDLINEParser:
                                     accession=str.decode(a,'unicode-escape')
                                     repository = str.decode(d['DataBankName'],'unicode-escape')
                                     val=repository+'/'+accession
-                                    try:
-#                                         PD[str(rec['PMID'])].append(val)
-                                    except:
-#                                         PD[str(rec['PMID'])]=[val]
-                                    try:
-#                                         RD[repository].append(accession)
-                                    except:
-#                                         RD[repository]=[accession]
         except:
             print >> sys.stderr, '{}\n{}\n***********'.format(path,traceback.format_exc())
         print path 
@@ -170,11 +163,11 @@ def parseBatchMEDLINE_helper(param):
 
 def parseBatchDataset_helper(param):
     return MEDLINEParser.parseBatchDataset(**param)
-    
+
+
 if __name__ == '__main__':
     from time import time
     s=time()
-    
-    MEDLINEParser.Parse()
+    MEDLINEParser.Parse(ParseFullMEDLINE = False)
     
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
