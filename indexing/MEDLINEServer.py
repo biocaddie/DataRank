@@ -144,7 +144,7 @@ class MEDLINEServer:
                 print >>f, line,
     
     @staticmethod
-    def saveMEDLINE(path='/home/arya/PubMed/', num_threads=20):
+    def saveMEDLINE(path='/home/arya/PubMedGEO/', num_threads=10):
         PMID=MEDLINEServer.loadPMIDs(path+'PMID/')
         outPath=path+'MEDLINE/'
         if not os.path.exists(outPath): os.makedirs(outPath)
@@ -189,6 +189,6 @@ class MEDLINEServer:
 if __name__ == '__main__':
     from time import time
     s=time()
-    MEDLINEServer.updatePMIDs()
+#     MEDLINEServer.updatePMIDs()
     MEDLINEServer.saveMEDLINE()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
