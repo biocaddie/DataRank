@@ -1,4 +1,5 @@
 import os
+import sys
 import sqlite3
 import re
 import mechanize
@@ -36,11 +37,17 @@ def _addCitaLists(pmid,url):
     soup = BeautifulSoup(urllib2.urlopen(url).read())
     firsttime = True
     nexturl = nextPageExist(soup)
-    titles=[]
     while firsttime or nexturl is not None:
         lists = soup.find_all("div", class_="search-results-content")
         for tag in lists:
-            titles.append(tag.find("value",attrs={"lang_id": ""}).get_text().strip())
+            title = tag.find("value",attrs={"lang_id": ""}).get_text().strip()
+            authorss = tag.find("span",text=re.compile("By: "))
+            if authorss is not None:
+                authors = authorss.parent.get_text().strip()[4:]
+            else:
+                authors = ""
+            journal = tag.find("source_title_txt_label").get_text().strip()
+            date = tag.find(text=re.compile("Published: ")).next_element.get_text()
         if firsttime and nexturl is not None:
             soup = BeautifulSoup(urllib2.urlopen(nexturl).read())
             firsttime = False
@@ -51,57 +58,110 @@ def _addCitaLists(pmid,url):
             if nexturl is not None:
                 soup = BeautifulSoup(urllib2.urlopen(nexturl).read())
                 firsttime = False
-    return titles
 
-def _parseURL(pmid,reURL):
-    contents = urllib2.urlopen(reURL).read()
-    soup = BeautifulSoup(contents)
+
+def get_citations_doi_pmid(citations_page_url):
+    soup = BeautifulSoup(urllib2.urlopen(citations_page_url).read())
+    firsttime = True
+    nexturl = nextPageExist(soup)
+    results=[]
+    ALL_URLs=[]
+    while firsttime or nexturl is not None:
+        Page_URLs = soup.find_all("a",attrs={"class": "smallV110"})#only one result normally
+        for u in Page_URLs:
+            ALL_URLs.append("http://apps.webofknowledge.com"+u['href'])
+        if firsttime and nexturl is not None:
+            soup = BeautifulSoup(urllib2.urlopen(nexturl).read())
+            firsttime = False
+        elif firsttime and nexturl is None:
+            break
+        else:
+            nexturl = nextPageExist(soup)
+            if nexturl is not None:
+                soup = BeautifulSoup(urllib2.urlopen(nexturl).read())
+                firsttime = False
+    for url in ALL_URLs:
+        results.append(get_pmid_doi(url))
+    return results
+
+def get_all_citations(reURL):
+    soup = BeautifulSoup(urllib2.urlopen(reURL).read())
     URL = soup.find("a",attrs={"class": "smallV110"})#only one result normally
     if URL is not None:
         url = "http://apps.webofknowledge.com"+URL['href']
-        contents2 = urllib2.urlopen(url).read()
-        soup2 = BeautifulSoup(contents2)
-        citedlists2 = soup2.find("a",attrs={"title": "View all of the articles that cite this one"})
-        if citedlists2 is not None:
-            ciurl2 = "http://apps.webofknowledge.com" + citedlists2['href']
-            _addCitaLists(pmid,ciurl2)
-    else:
-        print "Cannot find the data of PMID =",pmid
+        soup_citaions = BeautifulSoup(urllib2.urlopen(url).read())
+        citations_link = soup_citaions.find("a",attrs={"title": "View all of the articles that cite this one"})
+        if citations_link is not None:
+            return get_citations_doi_pmid("http://apps.webofknowledge.com" + citations_link['href'])
+    return None
 
 
 def citationNetwork(pmidList, titleList, doiList):
     for (pmid,title,doi) in zip(pmidList, titleList, doiList):
         if doi:
-            print "doi searching+++++++"
             reURL = _getResultURL(1,doi)
-            print pmid,reURL
-            if reURL is not None:
-                _parseURL(pmid,reURL)
         elif title:
-            print "title searching"
             reURL = _getResultURL(2,title)
-            print pmid,reURL
-            if reURL is not None:
-                _parseURL(pmid,reURL)
         else:
-            print "Cannot find the data of PMID =",pmid
+            print >> sys.stderr , "Cannot find the data of PMID =",pmid
+        if reURL is not None:
+            get_all_citations(pmid,reURL)
+
+def citations_for_pmid(pmid,title,doi):
+    print doi,title
+    if doi:
+        reURL = _getResultURL(1,doi)
+    elif title:
+#         return { pmid: None}
+        reURL = _getResultURL(2,title)
+    else:
+        print >> sys.stderr , "Cannot find the data of PMID =",pmid
+    if reURL is not None:
+        result ={ pmid: get_all_citations(reURL)}
+        print pmid
+        return result
+    
 
 def remove_None(seq):
     return [x for x in seq if x is not None]
 
+def get_pmid_doi(url):
+    content=urllib2.urlopen(url).read()
+    return get_tag(content,'doi'), get_tag(content,'pmid')
+
+def get_tag(content,tag):
+    soup = BeautifulSoup(content)
+    content=soup.find_all('p',attrs={"class": "FR_field"})
+    for field in content:
+        if field.find("span"):
+            if field.find("span").get_text().strip()=={'doi':'DOI:','pmid':'PubMed ID:'}[tag]:
+                if field.find("value"):
+                    return field.find("value").get_text().strip()
+    return None
+def citations_for_pmid_helper(param):
+    return citations_for_pmid(**param)
+
 if __name__ == '__main__':
     import pickle
-    pmidList= MEDLINEServer.MEDLINEServer.loadPMIDs('/Users/arya/')
-    PT=pickle.load(open('/Users/arya/PT.pkl'))
-    PDOI=pickle.load(open('/Users/arya/PDOI.pkl'))
-    titleList=[]
-    doiList=[]
-    for pmid in pmidList:
-        titleList.append(PT[pmid])
-        doiList.append(PDOI[pmid])
-    print doiList[:10]
-    exit()
-    print len(pmidList),len(titleList),len(doiList)
-    print len(remove_None(pmidList)),len(remove_None(titleList)),len(remove_None(doiList))
-    citationNetwork(pmidList, titleList, doiList)
+    import multiprocessing
+    path='/home/arya/PubMed/GEO/'    
+    fileout=path+'Datasets/{}.pkl'.format('citaions')
+    sys.stdout = open(fileout.replace('.pkl','.log'),'w')
+    sys.stderr = open(fileout.replace('.pkl','.err'),'w')
+    
+    pmidList= MEDLINEServer.MEDLINEServer.loadPMIDs(path)
+    PT=pickle.load(open(path+'Datasets/PT.pkl'))
+    PDOI=pickle.load(open(path+'Datasets/PDOI.pkl'))
+    params=[{'pmid':pmid, 'doi':PDOI[pmid],'title':PT[pmid]} for pmid in pmidList]
+    num_threads=1
+    results=[]
+    if num_threads==1:
+        for p in params:
+            results.append(  citations_for_pmid_helper(p))
+        else:
+            pool=multiprocessing.Pool(num_threads)
+            results=pool.map(citations_for_pmid_helper,params)
+    
+    
+        
 
