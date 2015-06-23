@@ -67,22 +67,13 @@ class MEDLINEServer:
     
     @staticmethod 
     def loadPMIDs(path):
-        files = [ f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
-        dates = np.array([])
-        fnames= np.array([])
-        for f in files:
-            if  f[:5]=='pmid_' and f[-4:]=='.txt':
-                dates=np.append(dates, f[5:-4].split('_to_')[1].replace('_','/'))
-                fnames=np.append(fnames,f)
-        indices = range(len(fnames))
-        indices.sort(lambda x,y: cmp(dates[x], dates[y]))
         PMID=[]
-        for f in fnames[indices]:
-            PMID+= open(path+ f).readlines()
-#             PMID+= map(lambda x: int(x.strip()), open(path+ f).readlines())
-#         PMID=MEDLINEServer.removeDuplicates(PMID)
-        print '{} PMID is returned until {}'.format(len(PMID), dates[indices][-1])
-        return np.array(PMID)
+        files = [ f for f in os.listdir(path+'PMID/') if os.path.isfile(os.path.join(path+'PMID/',f)) ]
+        for f in files:
+            if f[-4:] != '.txt':
+                continue
+            PMID+=map(str.strip, open(path+'PMID/'+f).readlines())
+        return np.array(list(set(PMID)))
     
     @staticmethod
     def getNumRecsordsInBatch(fname):
@@ -144,8 +135,8 @@ class MEDLINEServer:
                 print >>f, line,
     
     @staticmethod
-    def saveMEDLINE(path='/home/arya/PubMedGEO/', num_threads=10):
-        PMID=MEDLINEServer.loadPMIDs(path+'PMID/')
+    def saveMEDLINE(path='/home/arya/PubMed/GEO/', num_threads=10):
+        PMID=MEDLINEServer.loadPMIDs(path)
         outPath=path+'MEDLINE/'
         if not os.path.exists(outPath): os.makedirs(outPath)
         outPath+='raw/'
@@ -189,6 +180,5 @@ class MEDLINEServer:
 if __name__ == '__main__':
     from time import time
     s=time()
-#     MEDLINEServer.updatePMIDs()
     MEDLINEServer.saveMEDLINE()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)

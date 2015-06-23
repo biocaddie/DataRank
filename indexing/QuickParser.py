@@ -63,13 +63,13 @@ def getJname(article):
             return article['MedlineJournalInfo']['MedlineTA']
     return None
 
+
 def getPaper(rec):    
     try:
         return {'abstract':getAbstract(rec['Article']), 'title':getTitle(rec['Article']), 'year':getYear(rec['Article']),'month':getMonth(rec['Article']), 'jid':getJID(rec), 'jname':getJname(rec)}
 #         return {'abstract':getAbstract(rec['Article']), 'title':None, 'year':getYear(rec['Article']),'month':getMonth(rec['Article']), 'jid':getJID(rec), 'jname':getJname(rec)}
     except:
         return None
-        print
 
 def getMeSH(rec):
     try:
@@ -79,6 +79,13 @@ def getMeSH(rec):
         return mesh
     except:
         return None        
+
+def getDOI(article):
+    if 'ELocationID' in article.keys():
+        for doi in article['ELocationID']:
+            if doi.__dict__['attributes'][u'EIdType']==u'doi'and doi.__dict__['attributes'][u'ValidYN']=='uY':
+                return unicode(doi)
+    return None
 
 def getAuthor(article):    
     alist=[]
@@ -108,7 +115,7 @@ def getLanguage(article):
         return None
 
 def parseBatchAll(path):
-    P,PD,RD,PA,PM,PL={},{},{},{},{},{}
+    P,PD,RD,PA,PM,PL, PDOI, PT={},{},{},{},{},{},{}, {}
     f=open(path)
 #     f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
 #     f = Entrez.efetch(db='pubmed',id='19897313', retmode="xml")
@@ -119,18 +126,20 @@ def parseBatchAll(path):
                 rec=record['MedlineCitation']
                 pmid=str(rec['PMID'])
                 if 'Article' in rec.keys():
-                    if 'DataBankList' in rec['Article'].keys():
+                    if 'DataBankList' in rec['Article'].keys() :
                         PD,RD=getDatasets(pmid, rec['Article']['DataBankList'], PD, RD)
-                        article=rec['Article']
-                        P[pmid]= getPaper(rec)
-                        PA[pmid]=getAuthor(article)
-                        PL[pmid]=getLanguage(article)
-                        PM[pmid]=getMeSH(rec)
+                    article=rec['Article']
+                    P[pmid]= getPaper(rec)
+                    PA[pmid]=getAuthor(article)
+                    PL[pmid]=getLanguage(article)
+                    PM[pmid]=getMeSH(rec)
+                    PDOI[pmid]= getDOI(article)
+                    PT[pmid]= getTitle(article)
     except:
         print >> sys.stderr, '{}\n{}\n***********'.format(path,traceback.format_exc())
     print path 
     sys.stdout.flush()
-    return {'PD':PD,'RD':RD, 'P':P, 'PA':PA,'PM':PM,'PL':PL}
+    return {'PD':PD,'RD':RD, 'P':P, 'PA':PA,'PM':PM,'PL':PL, 'PDOI':PDOI, 'PT':PT}
 
 def parseBatch(path):
     PD,RD={},{}
@@ -187,20 +196,22 @@ def mergeBipartiteBatchResults(results):
     return {'PD':PD,'RD':RD}
 
 def mergeBipartiteBatchResultsAll(results):
-    P,PD,RD,PA,PM,PL={},{},{},{},{},{}
+    P,PD,RD,PA,PM,PL, PDOI, PT={},{},{},{},{},{},{}, {}
     for batch in results:
         P.update(batch['P'])
         PD.update(batch['PD'])
         PA.update(batch['PA'])
         PM.update(batch['PM'])
         PL.update(batch['PL'])
+        PT.update(batch['PT'])
+        PDOI.update(batch['PDOI'])
         for k,v in batch['RD'].items():
             if k in RD.keys():
                 for i in v:
                     RD[k].append(i)
             else:
                 RD[k]=v
-    return {'PD':PD,'RD':RD, 'P':P, 'PA':PA,'PM':PM,'PL':PL}
+    return {'PD':PD,'RD':RD, 'P':P, 'PA':PA,'PM':PM,'PL':PL, 'PDOI':PDOI, 'PT':PT}
 
 
 def bipartite(path='/home/arya/PubMed/',num_threads=20):    
@@ -219,13 +230,12 @@ def bipartite(path='/home/arya/PubMed/',num_threads=20):
     pickle.dump(results,open(fileout,'wb'))
     process_data_stats( data=results)
 
-def parseAll(path='/home/arya/PubMed/',num_threads=10):    
+def parseAll(runname,path='/home/arya/PubMed/GEO/',num_threads=20):    
     num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
-    fileout=path+'Datasets/all.pkl'
+    fileout=path+'Datasets/{}.pkl'.format(runname)
     sys.stdout = open(fileout.replace('.pkl','.log'),'w')
     sys.stderr = open(fileout.replace('.pkl','.err'),'w')
-    start=2000
-#     num_batches=start+20
+    start=0
     param=[path+'MEDLINE/raw/batch_{}.xml'.format(j) for j in range(start, num_batches)]
     if num_threads==1:
         results=[]
@@ -236,6 +246,7 @@ def parseAll(path='/home/arya/PubMed/',num_threads=10):
         results=pool.map(parseBatchAll,param)
         pool.terminate()
     print '\nMerging...\n'
+    sys.stdout.flush()
     results = mergeBipartiteBatchResultsAll(results)
     pickle.dump(results,open(fileout,'wb'))
     process_data_stats( data=results)
@@ -268,11 +279,11 @@ def word_cloud():
     plt.axis("off")
     plt.show()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
+
+
     
 if __name__ == '__main__':
     from time import time
     s=time()
-#     todayRun()
-#     parseBatchAll('path')
-    parseAll()
+    parseAll(runname='fromGEOandPubMed')
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
