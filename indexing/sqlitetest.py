@@ -1,10 +1,11 @@
 import os
-import re
 import sqlite3
+import re
 import mechanize
 import urllib2
 from Bio import Entrez
 from bs4 import BeautifulSoup
+import MEDLINEServer
 
 
 def _getResultURL(mode,text):
@@ -85,8 +86,22 @@ def citationNetwork(pmidList, titleList, doiList):
         else:
             print "Cannot find the data of PMID =",pmid
 
+def remove_None(seq):
+    return [x for x in seq if x is not None]
 
 if __name__ == '__main__':
-        
-    citationNetwork()
+    import pickle
+    pmidList= MEDLINEServer.MEDLINEServer.loadPMIDs('/Users/arya/')
+    data=pickle.load(open('/Users/arya/fromGEOandPubMed.pkl'))
+    PT=data['PT']
+    PDOI=data['PDOI']
+    titleList=[]
+    doiList=[]
+    for pmid in pmidList:
+        titleList.append(PT[pmid])
+        doiList.append(PDOI[pmid])
+
+    print len(pmidList),len(titleList),len(doiList)
+    print len(remove_None(pmidList)),len(remove_None(titleList)),len(remove_None(doiList))
+    citationNetwork(pmidList, titleList, doiList)
 

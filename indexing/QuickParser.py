@@ -245,10 +245,14 @@ def parseAll(runname,path='/home/arya/PubMed/GEO/',num_threads=20):
         pool = multiprocessing.Pool(num_threads)
         results=pool.map(parseBatchAll,param)
         pool.terminate()
-    print '\nMerging...\n'
+    print 'Merging...\n'
     sys.stdout.flush()
     results = mergeBipartiteBatchResultsAll(results)
-    pickle.dump(results,open(fileout,'wb'))
+    for (k,v) in results.items():
+        fileout=path+'Datasets/{}.pkl'.format(k)
+        pickle.dump(v,open(fileout,'wb'))
+    print 'Computing Stats...\n'
+    sys.stdout.flush()
     process_data_stats( data=results)
 
 def todayRun(path='/home/arya/PubMed/Datasets/bipartite2.pkl'):
