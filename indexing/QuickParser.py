@@ -83,7 +83,7 @@ def getMeSH(rec):
 def getDOI(article):
     if 'ELocationID' in article.keys():
         for doi in article['ELocationID']:
-            if doi.__dict__['attributes'][u'EIdType']==u'doi'and doi.__dict__['attributes'][u'ValidYN']=='uY':
+            if doi.__dict__['attributes'][u'EIdType']==u'doi'and doi.__dict__['attributes'][u'ValidYN']==u'Y':
                 return unicode(doi)
     return None
 
@@ -237,6 +237,10 @@ def parseAll(runname,path='/home/arya/PubMed/GEO/',num_threads=20):
     sys.stderr = open(fileout.replace('.pkl','.err'),'w')
     start=0
     param=[path+'MEDLINE/raw/batch_{}.xml'.format(j) for j in range(start, num_batches)]
+    
+#     num_threads=1
+#     path='/Users/arya/'
+#     param=['/Users/arya/batch_3.xml']
     if num_threads==1:
         results=[]
         for p in param:

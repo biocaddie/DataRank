@@ -92,15 +92,15 @@ def remove_None(seq):
 if __name__ == '__main__':
     import pickle
     pmidList= MEDLINEServer.MEDLINEServer.loadPMIDs('/Users/arya/')
-    data=pickle.load(open('/Users/arya/fromGEOandPubMed.pkl'))
-    PT=data['PT']
-    PDOI=data['PDOI']
+    PT=pickle.load(open('/Users/arya/PT.pkl'))
+    PDOI=pickle.load(open('/Users/arya/PDOI.pkl'))
     titleList=[]
     doiList=[]
     for pmid in pmidList:
         titleList.append(PT[pmid])
         doiList.append(PDOI[pmid])
-
+    print doiList[:10]
+    exit()
     print len(pmidList),len(titleList),len(doiList)
     print len(remove_None(pmidList)),len(remove_None(titleList)),len(remove_None(doiList))
     citationNetwork(pmidList, titleList, doiList)
