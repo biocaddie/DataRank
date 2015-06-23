@@ -7,11 +7,14 @@ import urllib2
 from Bio import Entrez
 from bs4 import BeautifulSoup
 import MEDLINEServer
-
+path='/home/arya/PubMed/GEO/'   
+citations_path=path+'Citations/'
+if not os.path.exists(citations_path):            os.makedirs(citations_path)
 
 def _getResultURL(mode,text):
     #the search page of web of science
-    searchURL = "http://apps.webofknowledge.com/UA_GeneralSearch_input.do?product=UA&search_mode=GeneralSearch&SID=2AkR6Gt4nU7x1c8tniD&preferencesSaved="
+    searchURL = "http://www.webofknowledge.com/?"
+#     searchURL = 'http://apps.webofknowledge.com/UA_GeneralSearch_input.do?product=UA&search_mode=GeneralSearch&SID=1C8JxbKLQCxk9XJveW5&preferencesSaved='
     br = mechanize.Browser()
     br.open(searchURL)
     br.select_form(name="UA_GeneralSearch_input_form")
@@ -20,7 +23,6 @@ def _getResultURL(mode,text):
     if mode == 1:
         controlItem.value = ['DO']
     elif mode == 2:
-        print "using title to search"
         controlItem.value = ['TI']
     request = br.form.click()
     response = mechanize.urlopen(request)
@@ -108,7 +110,6 @@ def citationNetwork(pmidList, titleList, doiList):
             get_all_citations(pmid,reURL)
 
 def citations_for_pmid(pmid,title,doi):
-    print doi,title
     if doi:
         reURL = _getResultURL(1,doi)
     elif title:
@@ -119,6 +120,8 @@ def citations_for_pmid(pmid,title,doi):
     if reURL is not None:
         result ={ pmid: get_all_citations(reURL)}
         print pmid
+        sys.stdout.flush()
+        pickle.dump(result, open(citations_path+pmid+'.pkl','wb'))
         return result
     
 
@@ -144,24 +147,22 @@ def citations_for_pmid_helper(param):
 if __name__ == '__main__':
     import pickle
     import multiprocessing
-    path='/home/arya/PubMed/GEO/'    
-    fileout=path+'Datasets/{}.pkl'.format('citaions')
-    sys.stdout = open(fileout.replace('.pkl','.log'),'w')
-    sys.stderr = open(fileout.replace('.pkl','.err'),'w')
     
+    fileout=path+'Datasets/{}.pkl'.format('citaions')
+    
+    pmid_processed_sofar= map(str.strip,open(fileout.replace('.pkl','.log')).readlines())
     pmidList= MEDLINEServer.MEDLINEServer.loadPMIDs(path)
+    
     PT=pickle.load(open(path+'Datasets/PT.pkl'))
     PDOI=pickle.load(open(path+'Datasets/PDOI.pkl'))
-    params=[{'pmid':pmid, 'doi':PDOI[pmid],'title':PT[pmid]} for pmid in pmidList]
-    num_threads=1
-    results=[]
+    params=[{'pmid':pmid, 'doi':PDOI[pmid],'title':PT[pmid]} for pmid in pmidList if pmid not in pmid_processed_sofar]
+    num_threads=200
+    print '\nTotal PMID: {}\nProcessed So far: {}\nRemaining: {}\nNum_Threads: {}'.format(len(pmidList), len(pmid_processed_sofar), len(params), num_threads)
+    sys.stdout = open(fileout.replace('.pkl','.log'),'a')
+    sys.stderr = open(fileout.replace('.pkl','.err'),'w')
     if num_threads==1:
-        for p in params:
-            results.append(  citations_for_pmid_helper(p))
-        else:
-            pool=multiprocessing.Pool(num_threads)
-            results=pool.map(citations_for_pmid_helper,params)
-    
-    
+        for p in params:    citations_for_pmid_helper(p)
+    else:
+        multiprocessing.Pool(num_threads).map(citations_for_pmid_helper,params)
         
 
