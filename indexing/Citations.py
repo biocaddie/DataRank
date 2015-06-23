@@ -1,10 +1,10 @@
 import os
 import sys
-import sqlite3
+import pickle
+import multiprocessing
 import re
 import mechanize
 import urllib2
-from Bio import Entrez
 from bs4 import BeautifulSoup
 import MEDLINEServer
 path='/home/arya/PubMed/GEO/'   
@@ -141,22 +141,19 @@ def get_tag(content,tag):
                 if field.find("value"):
                     return field.find("value").get_text().strip()
     return None
+
 def citations_for_pmid_helper(param):
     return citations_for_pmid(**param)
 
-if __name__ == '__main__':
-    import pickle
-    import multiprocessing
-    
+def save_citations(num_threads=20):
     fileout=path+'Datasets/{}.pkl'.format('citaions')
-    
     pmid_processed_sofar= map(str.strip,open(fileout.replace('.pkl','.log')).readlines())
     pmidList= MEDLINEServer.MEDLINEServer.loadPMIDs(path)
     
     PT=pickle.load(open(path+'Datasets/PT.pkl'))
     PDOI=pickle.load(open(path+'Datasets/PDOI.pkl'))
     params=[{'pmid':pmid, 'doi':PDOI[pmid],'title':PT[pmid]} for pmid in pmidList if pmid not in pmid_processed_sofar]
-    num_threads=200
+    
     print '\nTotal PMID: {}\nProcessed So far: {}\nRemaining: {}\nNum_Threads: {}'.format(len(pmidList), len(pmid_processed_sofar), len(params), num_threads)
     sys.stdout = open(fileout.replace('.pkl','.log'),'a')
     sys.stderr = open(fileout.replace('.pkl','.err'),'w')
@@ -164,5 +161,26 @@ if __name__ == '__main__':
         for p in params:    citations_for_pmid_helper(p)
     else:
         multiprocessing.Pool(num_threads).map(citations_for_pmid_helper,params)
+
+def getLen(item):
+    if item:
+        return len(item)
+    return 0
+
+def merge_saved_pickle_files():
+    files = [ citations_path+f for f in os.listdir(citations_path) if os.path.isfile(os.path.join(citations_path,f)) ]
+    print len(files)
+    results={}
+    for f in files:
+        results.update(pickle.load(open(f,'rb')))
+    for item in results.items():
+        print item[0], getLen(item[1]),item[1]
+    fileout=path+'Datasets/{}.pkl'.format('citaions')
+    pickle.dump(results, open(fileout,'wb'))
+
+if __name__ == '__main__':
+#     save_citations(num_threads=20)
+    merge_saved_pickle_files()
+    
         
 
