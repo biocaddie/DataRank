@@ -124,7 +124,7 @@ class MEDLINEServer:
         if os.path.exists(outPath):
             try:
                 n =MEDLINEServer.getNumRecsordsInBatch(outPath)
-                print  'Skipping Batch {} , which has {} records.'.format(outPath, n)
+                print  'Skipping Batch {} , which has {} records. (Complete)'.format(outPath, n)
                 if n ==10000:
                     return
             except:
@@ -135,7 +135,7 @@ class MEDLINEServer:
                 print >>f, line,
     
     @staticmethod
-    def saveMEDLINE(path='/home/arya/PubMed/GEO/', num_threads=10):
+    def saveMEDLINE(path='/home/arya/PubMed/', num_threads=10):
         PMID=MEDLINEServer.loadPMIDs(path)
         outPath=path+'MEDLINE/'
         if not os.path.exists(outPath): os.makedirs(outPath)
@@ -180,5 +180,5 @@ class MEDLINEServer:
 if __name__ == '__main__':
     from time import time
     s=time()
-    MEDLINEServer.saveMEDLINE()
+    MEDLINEServer.update()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)

@@ -75,11 +75,17 @@ def getMeSH(rec):
     except:
         return None        
 
-def getDOI(article):
+def getDOI(record):
+    article=record['MedlineCitation']['Article']
     if 'ELocationID' in article.keys():
         for doi in article['ELocationID']:
             if doi.__dict__['attributes'][u'EIdType']==u'doi'and doi.__dict__['attributes'][u'ValidYN']==u'Y':
                 return unicode(doi)
+    if 'PubmedData' in record.keys():
+        if 'ArticleIdList' in record[u'PubmedData'].keys(): 
+            for item in record[u'PubmedData'][u'ArticleIdList']:
+                if item.__dict__['attributes'][u'IdType']==u'doi':
+                    return unicode(item)
     return None
 
 def getAuthor(article):    
@@ -129,7 +135,7 @@ def parseBatch(path):
                     batch['PDate'][pmid]        = {'year':getYear(article),'month':getMonth(article)}
                     batch['PAuthor'][pmid]      =getAuthor(article)
                     batch['PLanguage'][pmid]    =getLanguage(article)
-                    batch['PDOI'][pmid]         = getDOI(article)
+                    batch['PDOI'][pmid]         = getDOI(record)
                     batch['PTitle'][pmid]       = getTitle(article)
     except:
         print >> sys.stderr, '{}\n{}\n***********'.format(path,traceback.format_exc())
@@ -146,8 +152,6 @@ def process_data_stats(path=None):
     for [k,u,v] in rd:    print  '{:20}{:10}{:10}'.format(k,u,v)
     print  '-------------------------------\n{:20}{:10}{:10}\n'.format('Total',sum(map(lambda (k,u,v):u,rd)),sum(map(lambda (k,u,v):v,rd)))
     print  'Until Batch {:5}, {:7} datasets are found {:7} papers'.format(data['iter'], sum(map(len,data['PD'].values())),len(data['PD'].keys()))
-
-    
 
 def mergeBatchResults(path):
     P,PD,RD,PA,PM,PL, PDOI, PT={},{},{},{},{},{},{}, {}
@@ -172,12 +176,13 @@ def mergeBatchResults(path):
 
 
 
-def parse(runname,path='/home/arya/PubMed/',num_threads=1):    
+def parse(runname,path='/home/arya/PubMed/',num_threads=10):
+    path='/Users/arya/'    
     num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
     fileout=path+'Datasets/{}.pkl'.format(runname)
     sys.stdout = open(fileout.replace('.pkl','.log'),'w')
     sys.stderr = open(fileout.replace('.pkl','.err'),'w')
-    start=2000
+    start=0
     param=[path+'MEDLINE/raw/batch_{}.xml'.format(j) for j in range(start, num_batches)]
     
     if num_threads==1:
@@ -186,13 +191,6 @@ def parse(runname,path='/home/arya/PubMed/',num_threads=1):
             break
     else:
         multiprocessing.Pool(num_threads).map(parseBatch,param)
-    print 'Merging...\n'
-    sys.stdout.flush()
-    mergeBatchResults()
-    
-    print 'Computing Stats...\n'
-    sys.stdout.flush()
-    process_data_stats( )
 
 def word_cloud():    
     from os import path
