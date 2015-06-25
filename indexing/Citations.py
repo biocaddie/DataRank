@@ -83,7 +83,7 @@ def get_citations_doi_pmid(citations_page_url):
                 soup = BeautifulSoup(urllib2.urlopen(nexturl).read())
                 firsttime = False
     for url in ALL_URLs:
-        results.append(get_pmid_doi(url))
+        results.append(get_pmid_doi_title(url))
     return results
 
 def get_all_citations(reURL):
@@ -119,21 +119,26 @@ def citations_for_pmid(pmid,title,doi):
         print >> sys.stderr , "Cannot find the data of PMID =",pmid
     if reURL is not None:
         result ={ pmid: get_all_citations(reURL)}
+        pickle.dump(result, open(citations_path+pmid+'.pkl','wb'))
         print pmid
         sys.stdout.flush()
-        pickle.dump(result, open(citations_path+pmid+'.pkl','wb'))
         return result
     
 
 def remove_None(seq):
     return [x for x in seq if x is not None]
 
-def get_pmid_doi(url):
+def get_pmid_doi_title(url):
     content=urllib2.urlopen(url).read()
-    return get_tag(content,'doi'), get_tag(content,'pmid')
+    return get_tag(content,'doi'), get_tag(content,'pmid'), get_tag(content,'title')
 
 def get_tag(content,tag):
     soup = BeautifulSoup(content)
+    if tag=='title':
+        try:
+            return soup.find('div',attrs={"class": "title"}).get_text().strip()
+        except:
+            pass
     content=soup.find_all('p',attrs={"class": "FR_field"})
     for field in content:
         if field.find("span"):
@@ -146,14 +151,13 @@ def citations_for_pmid_helper(param):
     return citations_for_pmid(**param)
 
 def save_citations(num_threads=20):
-    fileout=path+'Datasets/{}.pkl'.format('citaions')
+    fileout=path+'Datasets/{}.pkl'.format('citations')
     pmid_processed_sofar= map(str.strip,open(fileout.replace('.pkl','.log')).readlines())
     pmidList= MEDLINEServer.MEDLINEServer.loadPMIDs(path)
     
     PT=pickle.load(open(path+'Datasets/PT.pkl'))
     PDOI=pickle.load(open(path+'Datasets/PDOI.pkl'))
     params=[{'pmid':pmid, 'doi':PDOI[pmid],'title':PT[pmid]} for pmid in pmidList if pmid not in pmid_processed_sofar]
-    
     print '\nTotal PMID: {}\nProcessed So far: {}\nRemaining: {}\nNum_Threads: {}'.format(len(pmidList), len(pmid_processed_sofar), len(params), num_threads)
     sys.stdout = open(fileout.replace('.pkl','.log'),'a')
     sys.stderr = open(fileout.replace('.pkl','.err'),'w')
@@ -169,17 +173,15 @@ def getLen(item):
 
 def merge_saved_pickle_files():
     files = [ citations_path+f for f in os.listdir(citations_path) if os.path.isfile(os.path.join(citations_path,f)) ]
-    print len(files)
     results={}
     for f in files:
         results.update(pickle.load(open(f,'rb')))
-    for item in results.items():
-        print item[0], getLen(item[1]),item[1]
-    fileout=path+'Datasets/{}.pkl'.format('citaions')
+    fileout=path+'Datasets/{}.pkl'.format('citations')
     pickle.dump(results, open(fileout,'wb'))
+    print 'Merging {} citation files is done at {}!'.format(len(files),fileout)
 
 if __name__ == '__main__':
-#     save_citations(num_threads=20)
+    save_citations(num_threads=40)
     merge_saved_pickle_files()
     
         

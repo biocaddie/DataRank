@@ -1,5 +1,5 @@
 from Bio import Entrez
-import os
+import os, sys
 import numpy as np
 import datetime
 from multiprocessing import Pool
@@ -43,7 +43,8 @@ class MEDLINEServer:
             return (max(dates)+datetime.timedelta(1)) # from the day after last update
             
     @staticmethod
-    def updatePMIDs(path='/home/arya/PubMed/PMID/'):
+    def updatePMIDs(path):
+        path+='PMID/'
         if not os.path.exists(path):            os.makedirs(path)
         start =  MEDLINEServer.getDate(path, False)
         end   =  MEDLINEServer.getDate(path, not False)
@@ -128,14 +129,14 @@ class MEDLINEServer:
                 if n ==10000:
                     return
             except:
-                pass
+                print  'Downloading Batch {}.'.format(outPath)
         handle = Entrez.efetch(db='pubmed',id=pmidList, retmode="xml")
         with open(outPath,'w') as f:
             for line in handle.readlines():
                 print >>f, line,
     
     @staticmethod
-    def saveMEDLINE(path='/home/arya/PubMed/', num_threads=10):
+    def saveMEDLINE(path, num_threads):
         PMID=MEDLINEServer.loadPMIDs(path)
         outPath=path+'MEDLINE/'
         if not os.path.exists(outPath): os.makedirs(outPath)
@@ -143,18 +144,21 @@ class MEDLINEServer:
         if not os.path.exists(outPath): os.makedirs(outPath)
         N = len(PMID)
         batch_size=10000
+        
         num_batches= N/batch_size  +1
         print 'Num PMIDs: {}    Num Batches: {}    Num Threads: {}'.format(N,num_batches, num_threads)
-        
-        params=[{'pmidList':PMID[range(j*batch_size, min((j+1)*batch_size,N))] , 'outPath' : outPath + 'batch_{}.xml'.format(j)} for j in range(num_batches)]
+        start=0
+        params=[{'pmidList':PMID[range(j*batch_size, min((j+1)*batch_size,N))] , 'outPath' : outPath + 'batch_{}.xml'.format(j)} for j in range(start,num_batches)]
         pool = Pool(num_threads)
         pool.map(saveBatchHelper,params)
         pool.terminate()
             
     @staticmethod
-    def update():
-        MEDLINEServer.updatePMIDs()
-        MEDLINEServer.saveMEDLINE()
+    def updateBatchXMLFiles(path='/home/arya/PubMed/', num_threads=5):
+        sys.stdout = open(path+'updateBatchXMLFiles.log.txt','w')
+        sys.stderr = open(path+'updateBatchXMLFiles.err.txt','w')
+        MEDLINEServer.updatePMIDs(path)
+        MEDLINEServer.saveMEDLINE(path, num_threads)
         
     @staticmethod
     def batchParamForDatabase():
@@ -180,5 +184,5 @@ class MEDLINEServer:
 if __name__ == '__main__':
     from time import time
     s=time()
-    MEDLINEServer.update()
+    MEDLINEServer.updateBatchXMLFiles()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)

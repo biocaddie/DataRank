@@ -177,7 +177,6 @@ def mergeBatchResults(path):
 
 
 def parse(runname,path='/home/arya/PubMed/',num_threads=10):
-    path='/Users/arya/'    
     num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
     fileout=path+'Datasets/{}.pkl'.format(runname)
     sys.stdout = open(fileout.replace('.pkl','.log'),'w')
@@ -188,16 +187,12 @@ def parse(runname,path='/home/arya/PubMed/',num_threads=10):
     if num_threads==1:
         for p in param: 
             parseBatch(p)
-            break
     else:
         multiprocessing.Pool(num_threads).map(parseBatch,param)
 
 def word_cloud():    
-    from os import path
     import matplotlib.pyplot as plt
     from wordcloud import WordCloud
-    d = path.dirname(__file__)
-    
     text = """The wordcloud library is MIT licenced, but contains DroidSansMono.ttf, a true type font by Google, that is apache licensed. The font is by no means integral, and any other font can be used by setting the font_path variable when creating a WordCloud object.
     """
     wordcloud = WordCloud(background_color="white",max_words=20).generate(text)
