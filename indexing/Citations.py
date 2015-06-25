@@ -122,7 +122,6 @@ def citations_for_pmid(pmid,title,doi):
         pickle.dump(result, open(citations_path+pmid+'.pkl','wb'))
         print pmid
         sys.stdout.flush()
-        return result
     
 
 def remove_None(seq):
@@ -148,7 +147,10 @@ def get_tag(content,tag):
     return None
 
 def citations_for_pmid_helper(param):
-    return citations_for_pmid(**param)
+    try:
+        citations_for_pmid(**param)
+    except:
+        pass
 
 def save_citations(num_threads=20):
     fileout=path+'Datasets/{}.pkl'.format('citations')
@@ -181,8 +183,8 @@ def merge_saved_pickle_files():
     print 'Merging {} citation files is done at {}!'.format(len(files),fileout)
 
 if __name__ == '__main__':
-    save_citations(num_threads=40)
-    merge_saved_pickle_files()
+    save_citations(num_threads=18)
+#     merge_saved_pickle_files()
     
         
 

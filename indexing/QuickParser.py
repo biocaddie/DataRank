@@ -176,7 +176,7 @@ def mergeBatchResults(path):
 
 
 
-def parse(runname,path='/home/arya/PubMed/',num_threads=10):
+def parse(runname,path='/home/arya/PubMed/',num_threads=5):
     num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
     fileout=path+'Datasets/{}.pkl'.format(runname)
     sys.stdout = open(fileout.replace('.pkl','.log'),'w')
@@ -189,6 +189,32 @@ def parse(runname,path='/home/arya/PubMed/',num_threads=10):
             parseBatch(p)
     else:
         multiprocessing.Pool(num_threads).map(parseBatch,param)
+def get_all_files_in_dir(path):
+    return [ path+f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
+
+def  merge(path='/home/arya/PubMed/'):
+    sys.stdout = open('{}Datasets/merge.log'.format(path),'w')
+    sys.stderr = open('{}Datasets/merge.err'.format(path),'w')
+    files =[f for f in get_all_files_in_dir(path+'MEDLINE/raw/') if f[-4:]=='.pkl']
+    relations=pickle.load(open(path+'MEDLINE/raw/batch_0.pkl','rb')).keys()
+    print 'Merging', relations
+    for relation in relations:
+        print relation
+        all_batches={}
+        for j in range(len( files)):
+            batch=pickle.load(open(files[j],'rb'))[relation]
+            print j,files[j],len(batch), sys.stdout.flush()
+            if relation != 'RData' :
+                all_batches.update(batch)
+            else:
+                for k,v in batch.items():
+                    if k in all_batches.keys():
+                        for i in v:
+                            all_batches[k].append(i)
+                    else:
+                        all_batches[k]=v
+                
+        pickle.dump(all_batches,open('{}Datasets/{}.pkl'.format(path,relation),'wb'))
 
 def word_cloud():    
     import matplotlib.pyplot as plt
@@ -205,5 +231,6 @@ def word_cloud():
 if __name__ == '__main__':
     from time import time
     s=time()
-    parse(runname='parseAll')
+#     parse(runname='parseAll')
+    merge()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
