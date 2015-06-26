@@ -193,13 +193,12 @@ def get_all_files_in_dir(path):
     return [ path+f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
 
 def  merge(path='/home/arya/PubMed/'):
-    sys.stdout = open('{}Datasets/merge.log'.format(path),'w')
-    sys.stderr = open('{}Datasets/merge.err'.format(path),'w')
     files =[f for f in get_all_files_in_dir(path+'MEDLINE/raw/') if f[-4:]=='.pkl']
     relations=pickle.load(open(path+'MEDLINE/raw/batch_0.pkl','rb')).keys()
     print 'Merging', relations
     for relation in relations:
-        print relation
+        sys.stdout = open('{}Datasets/merge_{}.log'.format(path,relation),'w')
+        sys.stderr = open('{}Datasets/merge_{}.err'.format(path,relation),'w')
         all_batches={}
         for j in range(len( files)):
             batch=pickle.load(open(files[j],'rb'))[relation]
@@ -213,7 +212,6 @@ def  merge(path='/home/arya/PubMed/'):
                             all_batches[k].append(i)
                     else:
                         all_batches[k]=v
-                
         pickle.dump(all_batches,open('{}Datasets/{}.pkl'.format(path,relation),'wb'))
 
 def word_cloud():    
@@ -232,5 +230,5 @@ if __name__ == '__main__':
     from time import time
     s=time()
 #     parse(runname='parseAll')
-#     merge()
+    merge()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
