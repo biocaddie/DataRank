@@ -83,7 +83,7 @@ def get_citations_doi_pmid(citations_page_url):
                 soup = BeautifulSoup(urllib2.urlopen(nexturl).read())
                 firsttime = False
     for url in ALL_URLs:
-        results.append(get_pmid_doi_title(url))
+        results.append(get_pmid_doi_title_numCitaions(url))
     return results
 
 def get_all_citations(reURL):
@@ -127,9 +127,9 @@ def citations_for_pmid(pmid,title,doi):
 def remove_None(seq):
     return [x for x in seq if x is not None]
 
-def get_pmid_doi_title(url):
+def get_pmid_doi_title_numCitaions(url):
     content=urllib2.urlopen(url).read()
-    return get_tag(content,'doi'), get_tag(content,'pmid'), get_tag(content,'title')
+    return get_tag(content,'doi'), get_tag(content,'pmid'), get_tag(content,'title'), get_tag(content,'numCitations')
 
 def get_tag(content,tag):
     soup = BeautifulSoup(content)
@@ -141,9 +141,11 @@ def get_tag(content,tag):
     content=soup.find_all('p',attrs={"class": "FR_field"})
     for field in content:
         if field.find("span"):
-            if field.find("span").get_text().strip()=={'doi':'DOI:','pmid':'PubMed ID:'}[tag]:
+            if field.find("span").get_text().strip()=={'doi':'DOI:','pmid':'PubMed ID:','numCitations':'Times Cited in Web of Science Core Collection:'}[tag]:
                 if field.find("value"):
                     return field.find("value").get_text().strip()
+                elif tag == 'numCitations':
+                    return field.find("b").get_text().strip()
     return None
 
 def citations_for_pmid_helper(param):
@@ -154,19 +156,24 @@ def citations_for_pmid_helper(param):
 
 def save_citations(num_threads=20):
     fileout=path+'Datasets/{}.pkl'.format('citations')
-    pmid_processed_sofar= map(str.strip,open(fileout.replace('.pkl','.log')).readlines())
+    try:
+        pmid_processed_sofar= map(str.strip,open(fileout.replace('.pkl','.log')).readlines())
+    except:
+        pmid_processed_sofar=[]
     pmidList= MEDLINEServer.MEDLINEServer.loadPMIDs(path)
     
     PT=pickle.load(open(path+'Datasets/PT.pkl'))
     PDOI=pickle.load(open(path+'Datasets/PDOI.pkl'))
     params=[{'pmid':pmid, 'doi':PDOI[pmid],'title':PT[pmid]} for pmid in pmidList if pmid not in pmid_processed_sofar]
     print '\nTotal PMID: {}\nProcessed So far: {}\nRemaining: {}\nNum_Threads: {}'.format(len(pmidList), len(pmid_processed_sofar), len(params), num_threads)
+    old_stdout = sys.stdout
     sys.stdout = open(fileout.replace('.pkl','.log'),'a')
     sys.stderr = open(fileout.replace('.pkl','.err'),'w')
     if num_threads==1:
         for p in params:    citations_for_pmid_helper(p)
     else:
         multiprocessing.Pool(num_threads).map(citations_for_pmid_helper,params)
+    sys.stdout = old_stdout
 
 def getLen(item):
     if item:
@@ -183,7 +190,7 @@ def merge_saved_pickle_files():
     print 'Merging {} citation files is done at {}!'.format(len(files),fileout)
 
 if __name__ == '__main__':
-    save_citations(num_threads=18)
+    save_citations(num_threads=30)
 #     merge_saved_pickle_files()
     
         

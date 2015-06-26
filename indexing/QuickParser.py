@@ -232,5 +232,5 @@ if __name__ == '__main__':
     from time import time
     s=time()
 #     parse(runname='parseAll')
-    merge()
+#     merge()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)

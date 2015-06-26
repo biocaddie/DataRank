@@ -38,9 +38,21 @@ def gse_dataset_stats(path='/home/arya/PubMed/GEO/Datasets/'):
     gse_pmid = pickle.load(open(path+'gse_pmid.pkl','rb'))
     gse_summary = pickle.load(open(path+'gse_summary.pkl','rb'))
     gse_title = pickle.load(open(path+'gse_title.pkl','rb'))
-    print 'There are total of {} GEO Datasets which only\n{} has PMID\n{} has summary\n{} has title'.format( len(clean_dic(gse_pmid)), len(clean_dic(gse_pmid)), len(clean_dic(gse_summary)), len(clean_dic(gse_title)))
+    print 'There are total of {} GEO Datasets which only\n{} has PMID\n{} has summary\n{} has title'.format( len((gse_pmid)), len(clean_dic(gse_pmid)), len(clean_dic(gse_summary)), len(clean_dic(gse_title)))
 
 def gse_paper_stats(path='/home/arya/PubMed/GEO/Datasets/'):
+    PP = (pickle.load(open(path+'citations.pkl','rb')))
+    p=PP.keys()
+    for k,v in clean_dic(PP).items():
+        p+= v
+    num_p=map(lambda (k,v):len(set(v)),clean_dic(PP).items())
+    print 'So far, {} papers is pulled from WoS which are cited by {} papers ({} Uniques).'.format(len(PP),sum(num_p),len(set(p)))
+    
+    plt.hist(num_p,50,histtype='stepfilled')
+    plt.xlabel('Number of Citaions')
+    plt.ylabel('Papers')
+    plt.show()
+    
     PM = pickle.load(open(path+'PM.pkl','rb'))
     print 'There are {} papers which {} has MeSH terms.'.format(len(PM),len(clean_dic(PM)))
     PM=clean_dic(PM)
@@ -49,6 +61,7 @@ def gse_paper_stats(path='/home/arya/PubMed/GEO/Datasets/'):
     plt.xlabel('Number of MeSH')
     plt.ylabel('Papers')
     plt.show()
+    
 
 def create_MeSH_features_only_original_papers(path='/home/arya/PubMed/GEO/Datasets/'):
     gse_pmid = clean_dic(pickle.load(open(path+'gse_pmid.pkl','rb')))
@@ -73,16 +86,16 @@ def create_MeSH_features_cited_papers(path='/home/arya/PubMed/GEO/Datasets/'):
     for (d,p) in gse_pmid.items():
         if p in PM.keys(): 
             DMeSH[d]=PM[p] 
-    for k,v in PP.items():
-        print len(v[0])
     for op in pmid_gse.keys():
-        for doi,cp,title in PP[op]:
-            try:
-                DMeSH[pmid_gse[op]].append(PM[cp])
-            except:
-                print op,cp
-                print op in pmid_gse.keys()
-                print pmid_gse[op]
+        if PP[op]:
+            for doi,cp,title in PP[op]:
+                try:
+                    if cp in PM.keys():
+                        DMeSH[pmid_gse[op]].append(PM[cp])
+                except:
+                    print op,cp
+                    print op in pmid_gse.keys()
+                    print pmid_gse[op]
     pickle.dump(DMeSH, open(path+'DMeSHAll.pkl','wb'))    
     
     exit()
@@ -97,9 +110,6 @@ def create_MeSH_features_cited_papers(path='/home/arya/PubMed/GEO/Datasets/'):
     pp_tuples = []
     for cited_pmid,citaions in PP.items():
         for item in citaions:
-            if len(item)==2:
-                pp_tuples.append((cited_pmid,item[0],item[1],None))
-            else:
                 pp_tuples.append((cited_pmid,item[0],item[1],item[2]))
     
     df = pd.DataFrame(pp_tuples,columns=('cited_pmid','cites_doi','cites_pmid','cites_title'))
@@ -115,9 +125,8 @@ def create_MeSH_features_cited_papers(path='/home/arya/PubMed/GEO/Datasets/'):
 
 
 if __name__ == '__main__':
-    gse_dataset_stats()
-    gse_paper_stats()
-    create_MeSH_features_only_original_papers()    
+#     gse_dataset_stats()
+#     gse_paper_stats()
+#     create_MeSH_features_only_original_papers()    
     create_MeSH_features_cited_papers()
-#     fix()
     
