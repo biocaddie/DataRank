@@ -105,18 +105,21 @@ def merge():
     dic={}
     for item in all_gse:
         dic.update(item)
-    gse_pmid = {key: value['pmid'] for (key, value) in dic.items()}
-    pickle.dump(gse_pmid, open(data_outpath+'gse_pmid.pkl','wb'))
-    gse_title = {key: value['title'] for (key, value) in dic.items()}
-    pickle.dump(gse_title, open(data_outpath+'gse_title.pkl','wb'))
-    gse_summary = {key: value['summary'] for (key, value) in dic.items()}
-    pickle.dump(gse_summary, open(data_outpath+'gse_summary.pkl','wb'))
-    gse_pmid = {key: value  for (key, value) in gse_pmid.items() if value is not None}
-    pickle.dump(gse_pmid, open(data_outpath+'gse_pmid_clean.pkl','wb'))
-    with open(outpath.replace('GSE', 'PMID')+'gse_pmid.txt','w') as f:
-        for pmid in gse_pmid.values():
-            if len(pmid):
-                print >>f,pmid 
+    import pandas
+    DP = pandas.DataFrame([value.values() for (_, value) in dic.items()], columns=('pmid','title','did','summary'))
+    pickle.dump(DP, open(data_outpath+'DP.df','wb'))
+#     gse_pmid = {key: value['pmid'] for (key, value) in dic.items()}
+#     pickle.dump(gse_pmid, open(data_outpath+'gse_pmid.pkl','wb'))
+#     gse_title = {key: value['title'] for (key, value) in dic.items()}
+#     pickle.dump(gse_title, open(data_outpath+'gse_title.pkl','wb'))
+#     gse_summary = {key: value['summary'] for (key, value) in dic.items()}
+#     pickle.dump(gse_summary, open(data_outpath+'gse_summary.pkl','wb'))
+#     gse_pmid = {key: value  for (key, value) in gse_pmid.items() if value is not None}
+#     pickle.dump(gse_pmid, open(data_outpath+'gse_pmid_clean.pkl','wb'))
+#     with open(outpath.replace('GSE', 'PMID')+'gse_pmid.txt','w') as f:
+#         for pmid in gse_pmid.values():
+#             if len(pmid):
+#                 print >>f,pmid 
 #     c=np.array(count.values())
 #     print sum(c>1)
     
