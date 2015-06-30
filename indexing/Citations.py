@@ -190,8 +190,8 @@ def merge_saved_pickle_files():
     print 'Merging {} citation files is done at {}!'.format(len(files),fileout)
 
 if __name__ == '__main__':
-#     save_citations(num_threads=15)
-    merge_saved_pickle_files()
+    save_citations(num_threads=15)
+#     merge_saved_pickle_files()
     
         
 
