@@ -3,7 +3,9 @@ Created on Jun 24, 2015
 
 @author: arya
 '''
+import collections
 import pandas as pd
+import numpy as np
 import sys,pickle,os
 import pylab as plt
 import collections
@@ -41,38 +43,6 @@ def gse_dataset_stats(path='/home/arya/PubMed/GEO/Datasets/'):
     gse_title = pickle.load(open(path+'gse_title.pkl','rb'))
     print 'There are total of {} GEO Datasets which only\n{} has PMID\n{} has summary\n{} has title'.format( len((gse_pmid)), len(clean_dic(gse_pmid)), len(clean_dic(gse_summary)), len(clean_dic(gse_title)))
 
-# def create_df(path='/home/arya/PubMed/GEO/Datasets/'):
-#     PM = clean_dic(pickle.load(open(path+'PM.pkl','rb')))
-#     gse_pmid = clean_dic(pickle.load(open(path+'gse_pmid.pkl','rb')))
-#     pmid_gse={v:k for k,v in gse_pmid.items()}
-#     PP=pickle.load(open(path+'citations.pkl','rb'))
-#     DMeSH={}
-#     print '{} papers which {} has citaions.'.format(len(PP),len(clean_dic(PP)))
-#     PP= clean_dic(PP)
-#     
-#     pm_tuples=[]
-#     for p,ms in PM.items():
-#         for m in ms:
-#             pm_tuples.append((p,m))
-#     pm_df=pd.DataFrame(pm_tuples)
-#     pp_tuples = []
-#     for cited_pmid,citaions in PP.items():
-#         for item in citaions:
-#                 pp_tuples.append((cited_pmid,item[0],item[1],item[2]))
-#     
-#     df = pd.DataFrame(pp_tuples,columns=('cited_pmid','cites_doi','cites_pmid','cites_title'))
-#     print df.loc[df['cites_pmid'].isin([None])  &  df['cites_doi'].isin([None]) ]['cited_pmid']
-#     print df.loc[df['cites_pmid'].isin([None])  &  df['cites_doi'].isin([None])  &  df['cites_title'].isin([None]) ]['cited_pmid']
-#     PDOI = clean_dic(pickle.load(open(path+'PDOI.pkl','rb')))
-#     df2=pd.DataFrame(PDOI.items())
-#     
-#     print df2
-    
-#     to_be_redownloaded_citations = (df.loc[df['cites_pmid'].isin([None])  &  df['cites_doi'].isin([None])  &  df['cites_title'].isin([None]) ]['cited_pmid'].unique())
-#     pickle.dump(to_be_redownloaded_citations,open(path+'to_be_redownloaded_citations.pkl','wb'))
-
-
-
 def gse_paper_stats(path='/home/arya/PubMed/GEO/Datasets/'):
     PP = (pickle.load(open(path+'citations.pkl','rb')))
     p=PP.keys()
@@ -96,46 +66,98 @@ def gse_paper_stats(path='/home/arya/PubMed/GEO/Datasets/'):
     plt.show()
     
 
-def create_MeSH_features_only_original_papers(path='/home/arya/PubMed/GEO/Datasets/'):
-    gse_pmid = clean_dic(pickle.load(open(path+'gse_pmid.pkl','rb')))
-    PM = clean_dic(pickle.load(open(path+'PM.pkl','rb')))
-    DMeSH={}
-    for (d,p) in gse_pmid.items():
-        if p in PM.keys(): DMeSH[d]=PM[p] 
-    print 'There are {} datasets with MeSH terms.'.format(len(DMeSH))
-    pickle.dump(DMeSH, open(path+'DMeSHOriginal.pkl','wb'))
-    num_mesh=map(lambda (k,v):len(set(v)),DMeSH.items())
-    plt.hist(num_mesh,20,histtype='stepfilled')
-    plt.xlabel('Number of MeSH')
-    plt.ylabel('Datasets')
-    plt.show()
+def create_dataset(df,PM,MeSH):
+    labels, feats=[],[]
+    j=0
+    for _,row in df.iterrows():
+        feat={}
+        try:
+            feat.update(MeSH.loc[PM[row.cited_pmid]].value_counts().to_dict())
+        except:
+            pass
+        try:
+            feat.update(MeSH.loc[PM[row.cites_pmid]].value_counts().to_dict())
+        except:
+            pass
+        if len(feat):
+            feats.append(feat)
+            labels.append( row.did)
+        else:
+            j+=1
+    print '{} were unsucessful, out of {}'.format(j,df.shape[0])
+    return labels,feats
+    
 
+def write_libsvm_dataset(labels, feats,path):
+    with open(path,'w') as f:
+        for label,feat in zip(labels, feats):
+            print >> f,label,
+            for k,v in feat.items():
+                print >> f,' {}:{}'.format(k,v)
 
 def create_MeSH_features(path='/home/arya/PubMed/GEO/Datasets/'):
-    PM=pickle.load(open(path+'PM.df','rb'))
-    PM['mid_num']=pd.Categorical(PM['mid']).labels
-    PP=pickle.load(open(path+'PP.df','rb'))[['cited_pmid','cites_pmid']].dropna()
-    DP=pickle.load(open(path+'DP.df','rb'))[['pmid','did']].dropna()
-    DP['did_num']=pd.Categorical(DP['did']).labels
-    DPP = pd.merge(DP,PP, left_on=['pmid'] ,right_on=[ 'cited_pmid'])
-    DPP.drop('pmid', axis=1, inplace=True)
-    DPPM = pd.merge(DPP,PM, left_on=['cites_pmid'], right_on=['pmid'])
-    DPPM.drop('pmid', axis=1, inplace=True)
-    print DPPM
-    print ''.format()
-#     print PP
-#     print DP
+    IDX=pickle.load(open(path+'DPP.CV.pkl','rb'))
+    PM=clean_dic(pd.read_pickle(path+'PMeSH.pkl'))
+    DPP=pd.read_pickle(path+'DPP.df')
+    MeSH=pd.read_pickle(path+'MeSH.df').mid
+    for fold in range(len(IDX['trains'])):
+        train=DPP[DPP.sid.isin(IDX['trains'][fold])][['did','cited_pmid','cites_pmid']]
+        print 'creating train dataset...', train.shape
+        labels,feats=create_dataset(train, PM,MeSH)
+#         pickle.dump({'labels':labels,'feats':feats}, open('{}train.{}.pkl'.format(path,fold),'wb'))
+        print 'writing train dataset...'
+        write_libsvm_dataset(labels, feats,'{}train.{}.libsvm'.format(path,fold))
+        test =DPP[DPP.sid.isin(IDX['tests'][fold])][['did','cited_pmid','cites_pmid']]
+        print 'creating test dataset...', test.shape
+        labels,feats=create_dataset(test, PM, MeSH)
+#         pickle.dump({'labels':labels,'feats':feats}, open('{}test.{}.pkl'.format(path,fold),'wb'))
+        print 'writing test dataset...'
+        write_libsvm_dataset(labels, feats,'{}test.{}.libsvm'.format(path,fold))
+        
 
         
     
-def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/'):
-    PM = create_df(pickle.load(open(path+'PM.pkl','rb')),columns=('pmid','mid'))
+def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5):
+    mesh=pickle.load(open('/home/arya/PubMed/MeSH/mesh.pkl'))
+    mesh=pd.DataFrame(mesh)
+    mesh['mid']=mesh.index
+    mesh.index=mesh.uid
+    mesh.drop('uid',axis=1,inplace=True)
+    mesh.to_pickle(path+'MeSH.df')
+    
+    DP = pd.DataFrame([value.values() for (_, value) in pickle.load(open(path+'DP.pkl','rb')).items()], columns=('pmid','title','dname','summary'))
+    DP.drop_duplicates(inplace=True)
+    DP['did']=DP.index
+    DP.to_pickle(path+'DP.df')
+    
     PP=create_df(pickle.load(open(path+'citations.pkl','rb')), columns=('cited_pmid','cites_doi','cites_pmid','cites_title', 'cites_num_citaion'))
-    PM.drop_duplicates(inplace=True)
-    pickle.dump(PM,open(path+'PM.df','wb'))
     PP.drop_duplicates(inplace=True)
-    PP['sid']=PP.index
-    pickle.dump(PP,open(path+'PP.df','wb'))
+    PP.drop(['cites_doi','cites_title'], axis=1, inplace=True)
+    PP.to_pickle(path+'PP.df')
+    
+    PMID=set.union(set(PP.cited_pmid.values),set(PP.cites_pmid.values))
+    with open('/home/arya/PubMed/GEO/PMID/pmid.txt','w') as f:
+        for p in PMID:
+            print >>f,p
+    
+    
+    M= PP.shape[0]
+    N=PP['cited_pmid'].unique().shape[0]
+    PP=PP[['cites_pmid','cited_pmid']].dropna() # remove all rows with None (zero citation papers)
+    PP.index=PP.cited_pmid
+    th=n_fold*10
+    keep=PP['cited_pmid'].value_counts()>=th
+    keep=keep[keep].index
+    PP=PP.loc[keep]
+    print 'of {} original papers, {} have more than {} citations, (removing {}) '.format(N, len(keep), th, N -len(keep))
+    print 'of {} citations, {} are corresponding to labels with more than {} samples'.format(M,PP.shape[0],th)
+    DP=pd.read_pickle(path+'DP.df')[['did','pmid',]].dropna()
+    DP=DP[~DP.pmid.duplicated()] # remove duplicate classes
+    DPP = pd.merge(DP,PP, left_on=['pmid'] ,right_on=[ 'cited_pmid'])
+    print 'of {} samples and {} classes (datasets) after joining with {} original papers'.format(DPP.shape[0], DPP.did.unique().shape[0], DPP.cited_pmid.unique().shape[0])
+    DPP.drop('pmid', axis=1, inplace=True)
+    DPP['sid']=DPP.index
+    DPP.to_pickle(path+'DPP.df')
 
 def create_df(dic, columns=None):
     for k,V in dic.items():
@@ -169,34 +191,21 @@ def create_df(dic, columns=None):
 def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     import numpy as np
     from sklearn.cross_validation import KFold
-    
-    PP=pickle.load(open(path+'PP.df','rb'))
-    N=PP['cited_pmid'].unique().shape[0]
-    print N
-    PP=PP.dropna()
-    hist=collections.Counter(PP['cited_pmid'])
-    keep=[k for k,v in hist.items() if v>n_fold]
-    remove=[k for k,v in hist.items() if v<=n_fold or k is None]
-    print 'of {} {},  {} have more than {} citations, (removing {}) '.format(N,len(remove)+len(keep), len(keep), n_fold, len(remove))
-    PP=PP[PP['cited_pmid'].isin(keep)]
-    
-    
-    pmid_unique=PP['cited_pmid'].unique()
+    DPP= pd.read_pickle(path+'DPP.df')
     trains,tests= [[] for _ in range(n_fold)], [[] for _ in range(n_fold)]
-    j=0
-    for pmid in pmid_unique:
-        j+=1
-        PPpmid=PP.loc[PP['cited_pmid']==pmid]
-        kf = KFold(PPpmid.shape[0], n_folds=n_fold)
+    DID=DPP.did.unique()
+    for did in DID:
+        DPPdid=DPP.loc[DPP.did==did]
+        kf = KFold(DPPdid.shape[0], n_folds=n_fold)
         for train, test, (train_idx, test_idx) in zip(trains,tests,kf):
-            train+= list(PP.iloc[train_idx]['sid'])
-            test+= list(PP.iloc[test_idx]['sid'])
+            train+= list(DPPdid.iloc[train_idx].sid)
+            test+= list(DPPdid.iloc[test_idx].sid)
 #         if j>2: break
-    pickle.dump({'trains':trains, 'tests':tests},open('{}PP.cvidx.pkl'.format(path),'wb'))
-    for i in range(n_fold):
-        
-        
-        pickle.dump(tests[i],open('{}PP.{}cv.test.fold{}.df'.format(path,n_fold,i),'wb'))
+    print 'CV trains has {} and CV test has {} samples'.format(len(trains[0]), len(tests[0]))
+    pickle.dump({'trains':trains, 'tests':tests},open('{}DPP.CV.pkl'.format(path),'wb'))
+
+    
+    
     
 if __name__ == '__main__':
     
@@ -205,9 +214,10 @@ if __name__ == '__main__':
 #     create_MeSH_features_only_original_papers()
 
     convert_to_df()
-    split()
+#     split()
 #     create_MeSH_features()
-
+    
+    
         
     
     

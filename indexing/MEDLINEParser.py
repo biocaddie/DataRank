@@ -11,24 +11,6 @@ from multiprocessing import Pool
 import pickle
 import sys
 import traceback
-def add_record(param,record):
-    param['pmid'].append(record['MedlineCitation']['PMID'])
-    try:
-        param['abstract'].append(record['MedlineCitation']['Article']['Abstract']['AbstractText'][0])
-        param['abstractLength'].append(len(record['MedlineCitation']['Article']['Abstract']['AbstractText'][0]))
-    except KeyError:
-        param['abstract'].append('')
-        param['abstractLength'].append(0)
-    param['DataBankList'].append(record['MedlineCitation']['Article']['DataBankList'])
-    param['title'].append(record['MedlineCitation']['Article']['ArticleTitle'])
-    param['date'].append(record['MedlineCitation']['Article']['Journal']['JournalIssue']['PubDate'])
-    param['lang'].append(record['MedlineCitation']['Article']['Language'])
-    param['mesh'].append(record['MedlineCitation']['MeshHeadingList'])
-    param['author'].append(record['MedlineCitation']['Article']['AuthorList'][0])
-    param['journal'].append(record['MedlineCitation']['MedlineJournalInfo']['MedlineTA'])
-    param['country'].append(record['MedlineCitation']['MedlineJournalInfo']['Country'])
-    param['jid'].append(record['MedlineCitation']['MedlineJournalInfo']['NlmUniqueID'])
-    param['issn'].append(record['MedlineCitation']['MedlineJournalInfo']['ISSNLinking'])
 
 
 
@@ -49,6 +31,8 @@ class MEDLINEParser:
                 for t in c.terms:
                     db.entryTerm.name.append(t.name)
                     db.entryTerm.id.append(t.ui)
+        pickle.dump(db,open(path.replace('.xml','.pkl'),'wb'))
+        pickle.dump({'uid':db.mesh.id,'name':db.mesh.name},open(path.replace('desc2015.xml','mesh.pkl'),'wb'))
         return db
         
     @staticmethod
@@ -63,14 +47,17 @@ class MEDLINEParser:
     
     @staticmethod
     def Parse(path='/home/arya/PubMed/',num_threads=20, ParseFullMEDLINE=True):
+        """
+        if ParseFullMEDLINE=True: it parses all the fields in the MEDLINE records
+        else: it only looks for datasets
+        """
 #     f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
 #     records = Entrez.parse(f)
         num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
         fileout=path+'Datasets/{}.pkl'.format(('datasets','MEDLINE')[ParseFullMEDLINE])
         sys.stdout = open(fileout.replace('.pkl','.log'),'w')
         sys.stderr = open(fileout.replace('.pkl','.err'),'w')
-        start=2000
-        num_batches=2020
+        start=0
         pool = Pool(num_threads)
         if ParseFullMEDLINE:
             meshdb=MEDLINEParser.MeSH()
@@ -86,19 +73,6 @@ class MEDLINEParser:
         pickle.dump(db,open(fileout,'w'))
         
                 
-
-#     @staticmethod
-#     def dataset_stats(path=None, data=None):
-#         if data is None:    data=pickle.load(open(path))
-#         else: data['iter']=0
-#     #     with open(path.replace('.pkl','.log'),'a') as f:
-#         print  '************************************************'
-#         print  '{:20}{:10}{:10}'.format('Repository','#Datasets', '#Uniques')
-#         rd = sorted(map(lambda (k,v): (k,len(v),len(set(v))),data['RD'].items()),key=lambda x: x[1],reverse=True)
-#         for [k,u,v] in rd:    print  '{:20}{:10}{:10}'.format(k,u,v)
-#         print  '-------------------------------\n{:20}{:10}{:10}\n'.format('Total',sum(map(lambda (k,u,v):u,rd)),sum(map(lambda (k,u,v):v,rd)))
-#         print  'Until Batch {:5}, {:7} datasets are found {:7} papers'.format(data['iter'], sum(map(len,data['PD'].values())),len(data['PD'].keys()))
-    
     @staticmethod
     def dataset_stats(path=None, data=None):
         if data is None:    data=pickle.load(open(path))
@@ -168,6 +142,6 @@ def parseBatchDataset_helper(param):
 if __name__ == '__main__':
     from time import time
     s=time()
-    MEDLINEParser.Parse(ParseFullMEDLINE = False)
-    
+#     MEDLINEParser.Parse(ParseFullMEDLINE = False)
+    MEDLINEParser.Parse(path='/home/arya/PubMed/GEO/')
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)

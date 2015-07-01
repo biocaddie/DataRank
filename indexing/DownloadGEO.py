@@ -105,9 +105,7 @@ def merge():
     dic={}
     for item in all_gse:
         dic.update(item)
-    import pandas
-    DP = pandas.DataFrame([value.values() for (_, value) in dic.items()], columns=('pmid','title','did','summary'))
-    pickle.dump(DP, open(data_outpath+'DP.df','wb'))
+    pickle.dump(dic, open(data_outpath+'DP.pkl','wb'))
 #     gse_pmid = {key: value['pmid'] for (key, value) in dic.items()}
 #     pickle.dump(gse_pmid, open(data_outpath+'gse_pmid.pkl','wb'))
 #     gse_title = {key: value['title'] for (key, value) in dic.items()}

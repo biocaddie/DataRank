@@ -176,9 +176,9 @@ def mergeBatchResults(path):
 
 
 
-def parse(runname,path='/home/arya/PubMed/',num_threads=5):
+def parse(path,num_threads=5):
     num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
-    fileout=path+'Datasets/{}.pkl'.format(runname)
+    fileout=path+'Datasets/parse.pkl'
     sys.stdout = open(fileout.replace('.pkl','.log'),'w')
     sys.stderr = open(fileout.replace('.pkl','.err'),'w')
     start=0
@@ -192,7 +192,7 @@ def parse(runname,path='/home/arya/PubMed/',num_threads=5):
 def get_all_files_in_dir(path):
     return [ path+f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
 
-def  merge(path='/home/arya/PubMed/'):
+def  merge(path):
     files =[f for f in get_all_files_in_dir(path+'MEDLINE/raw/') if f[-4:]=='.pkl']
     relations=pickle.load(open(path+'MEDLINE/raw/batch_0.pkl','rb')).keys()
     print 'Merging', relations
@@ -232,6 +232,8 @@ def word_cloud():
 if __name__ == '__main__':
     from time import time
     s=time()
-#     parse(runname='parseAll')
-    merge()
+    path='/home/arya/PubMed/GEO/'
+    print path
+#     parse(path)
+    merge(path)
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)

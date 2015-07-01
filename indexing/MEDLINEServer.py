@@ -184,5 +184,6 @@ class MEDLINEServer:
 if __name__ == '__main__':
     from time import time
     s=time()
-    MEDLINEServer.updateBatchXMLFiles()
+#     MEDLINEServer.updateBatchXMLFiles()
+    MEDLINEServer.saveMEDLINE(path='/home/arya/PubMed/GEO/', num_threads=10)
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
