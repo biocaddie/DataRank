@@ -91,9 +91,10 @@ def create_dataset(df,PM,MeSH):
 def write_libsvm_dataset(labels, feats,path):
     with open(path,'w') as f:
         for label,feat in zip(labels, feats):
-            print >> f,label,
-            for k,v in feat.items():
-                print >> f,' {}:{}'.format(k,v)
+            line=str(label)
+            for k,v in sorted(feat.items(),key=lambda x: x[0]):
+                line+=' {}:{}'.format(k,v)
+            print >>f,line
 
 def create_MeSH_features(path='/home/arya/PubMed/GEO/Datasets/'):
     IDX=pickle.load(open(path+'DPP.CV.pkl','rb'))
@@ -106,18 +107,18 @@ def create_MeSH_features(path='/home/arya/PubMed/GEO/Datasets/'):
         labels,feats=create_dataset(train, PM,MeSH)
 #         pickle.dump({'labels':labels,'feats':feats}, open('{}train.{}.pkl'.format(path,fold),'wb'))
         print 'writing train dataset...'
-        write_libsvm_dataset(labels, feats,'{}train.{}.libsvm'.format(path,fold))
+        write_libsvm_dataset(labels, feats,'{}libsvm/train.{}.libsvm'.format(path,fold))
         test =DPP[DPP.sid.isin(IDX['tests'][fold])][['did','cited_pmid','cites_pmid']]
         print 'creating test dataset...', test.shape
         labels,feats=create_dataset(test, PM, MeSH)
 #         pickle.dump({'labels':labels,'feats':feats}, open('{}test.{}.pkl'.format(path,fold),'wb'))
         print 'writing test dataset...'
-        write_libsvm_dataset(labels, feats,'{}test.{}.libsvm'.format(path,fold))
+        write_libsvm_dataset(labels, feats,'{}libsvm/test.{}.libsvm'.format(path,fold))
         
 
         
     
-def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5):
+def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10):
     mesh=pickle.load(open('/home/arya/PubMed/MeSH/mesh.pkl'))
     mesh=pd.DataFrame(mesh)
     mesh['mid']=mesh.index
@@ -129,6 +130,10 @@ def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5):
     DP.drop_duplicates(inplace=True)
     DP['did']=DP.index
     DP.to_pickle(path+'DP.df')
+    D=DP[['did','dname']].dropna()
+    D.index=D.dname
+    D.drop('dname',axis=1, inplace=True)
+    D.to_pickle(path+'D.df')
     
     PP=create_df(pickle.load(open(path+'citations.pkl','rb')), columns=('cited_pmid','cites_doi','cites_pmid','cites_title', 'cites_num_citaion'))
     PP.drop_duplicates(inplace=True)
@@ -136,6 +141,7 @@ def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5):
     PP.to_pickle(path+'PP.df')
     
     PMID=set.union(set(PP.cited_pmid.values),set(PP.cites_pmid.values))
+    print  'writing all pmids in PMID folder for download'
     with open('/home/arya/PubMed/GEO/PMID/pmid.txt','w') as f:
         for p in PMID:
             print >>f,p
@@ -143,16 +149,21 @@ def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5):
     
     M= PP.shape[0]
     N=PP['cited_pmid'].unique().shape[0]
-    PP=PP[['cites_pmid','cited_pmid']].dropna() # remove all rows with None (zero citation papers)
+    print 'Dropping NA...'
+    PP=PP[['cites_pmid','cited_pmid', 'cites_num_citaion']].dropna() # remove all rows with None (zero citation papers)
     PP.index=PP.cited_pmid
-    th=n_fold*10
+    th=46
+    print 'Dropping cited paper with less than {} citations...'.format(th)
     keep=PP['cited_pmid'].value_counts()>=th
     keep=keep[keep].index
     PP=PP.loc[keep]
+    print 'Dropping cited paper with less than 1 citations...'
+    PP=PP[~(PP.cites_num_citaion=='0')]
     print 'of {} original papers, {} have more than {} citations, (removing {}) '.format(N, len(keep), th, N -len(keep))
     print 'of {} citations, {} are corresponding to labels with more than {} samples'.format(M,PP.shape[0],th)
-    DP=pd.read_pickle(path+'DP.df')[['did','pmid',]].dropna()
-    DP=DP[~DP.pmid.duplicated()] # remove duplicate classes
+    DP=pd.read_pickle(path+'DP.df')[['did','dname', 'pmid']].dropna()
+    print 'Remove duplicate classes (original papers with more than one datasets)...'
+    DP=DP[~DP.pmid.duplicated()] # 
     DPP = pd.merge(DP,PP, left_on=['pmid'] ,right_on=[ 'cited_pmid'])
     print 'of {} samples and {} classes (datasets) after joining with {} original papers'.format(DPP.shape[0], DPP.did.unique().shape[0], DPP.cited_pmid.unique().shape[0])
     DPP.drop('pmid', axis=1, inplace=True)
@@ -187,8 +198,10 @@ def create_df(dic, columns=None):
         return pd.DataFrame(tuples,columns=columns )
     else:
         return pd.DataFrame(tuples)
-    
-def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
+
+
+
+def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=10):
     import numpy as np
     from sklearn.cross_validation import KFold
     DPP= pd.read_pickle(path+'DPP.df')
@@ -205,8 +218,9 @@ def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     pickle.dump({'trains':trains, 'tests':tests},open('{}DPP.CV.pkl'.format(path),'wb'))
 
     
-    
-    
+def create_GEO_Queries(path='/home/arya/PubMed/GEO/Datasets/'):
+    DPP= pd.read_pickle(path+'DPP.df')   
+    PM= pd.read_pickle(path+'PMeSH.pkl')
 if __name__ == '__main__':
     
 #     gse_dataset_stats()
@@ -214,7 +228,7 @@ if __name__ == '__main__':
 #     create_MeSH_features_only_original_papers()
 
     convert_to_df()
-#     split()
+    split()
 #     create_MeSH_features()
     
     

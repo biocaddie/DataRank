@@ -155,7 +155,7 @@ def citations_for_pmid_helper(param):
         pass
 
 def save_citations(num_threads=20):
-    fileout=path+'Datasets/{}.pkl'.format('citations')
+    fileout=path+'Datasets/citations.pkl'
     try:
         pmid_processed_sofar= map(str.strip,open(fileout.replace('.pkl','.log')).readlines())
     except:
@@ -167,8 +167,9 @@ def save_citations(num_threads=20):
     params=[{'pmid':pmid, 'doi':PDOI[pmid],'title':PT[pmid]} for pmid in pmidList if pmid not in pmid_processed_sofar]
     print '\nTotal PMID: {}\nProcessed So far: {}\nRemaining: {}\nNum_Threads: {}'.format(len(pmidList), len(pmid_processed_sofar), len(params), num_threads)
     old_stdout = sys.stdout
-    sys.stdout = open(fileout.replace('.pkl','.log'),'a')
-    sys.stderr = open(fileout.replace('.pkl','.err'),'w')
+    if not os.path.exists(path+'Log'):            os.makedirs(path+'Log')
+    sys.stdout = open(path+'Log/citations.pkl','a')
+    sys.stderr = open(path+'Log/citations.pkl','w')
     if num_threads==1:
         for p in params:    citations_for_pmid_helper(p)
     else:

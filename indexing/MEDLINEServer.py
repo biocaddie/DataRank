@@ -155,8 +155,8 @@ class MEDLINEServer:
             
     @staticmethod
     def updateBatchXMLFiles(path='/home/arya/PubMed/', num_threads=5):
-        sys.stdout = open(path+'Datasets/updateBatchXMLFiles.log','w')
-        sys.stderr = open(path+'Datasets/updateBatchXMLFiles.err','w')
+        sys.stdout = open(path+'Log/updateBatchXMLFiles.log','w')
+        sys.stderr = open(path+'Log/updateBatchXMLFiles.err','w')
         MEDLINEServer.updatePMIDs(path)
         MEDLINEServer.saveMEDLINE(path, num_threads)
         

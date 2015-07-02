@@ -4,32 +4,41 @@ Created on Jun 26, 2015
 @author: arya
 '''
 import subprocess
-import os
-import cmd
-from svmutil import *
-def learn_svm(ds='/home/arya/libsvm/wine', C=10, G=1, cv=0, runnrame='foo' , linear=True, exe='/home/arya/libsvm/svm-train', out='/home/arya/out/'):
-    if not os.path.exists(out):            os.makedirs(out)
-    cmd='{} -c {} -t {} {} {} {}model '.format(exe, C, ( '{} -g {}'.format(2,1), 0)[linear], ('' ,'-v {}'.format(cv))[cv>0], ds, out)
-    print cmd
-    proc= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if cv:
-        print cv, 'Fold', proc.stdout.readlines()[-1].strip() 
+import os , pickle
+from sklearn.multiclass import OneVsRestClassifier
+from sklearn.svm import libsvm, LinearSVC,libsvm_sparse
+from sklearn.datasets import load_svmlight_file
+import numpy as np
+from time import time
 
-def learn_svm2(ds='/home/arya/libsvm/wine', C=10, G=1, cv=0, runnrame='foo' , linear=True, exe='/home/arya/libsvm/svm-train', out='/home/arya/out/'):
-    y, x = svm_read_problem(ds)
-    m = svm_train(y, x, '-c 4')
-    p_label, p_acc, p_val = svm_predict(y, x, m)
-    print m.label
-    print p_label,
-    print p_val
-    print len(p_val)
-     
-def predict_svm(ds='/home/arya/libsvm/wine', exe='/home/arya/libsvm/svm-predict', out='/home/arya/out/'):
-    if not os.path.exists(out):            os.makedirs(out)
-    cmd='{} {} {}model {}predict '.format(exe, ds, out,out)
-    print cmd
-    proc= subprocess.Popen(cmd, shell= True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
+
+def get_ranking(path='/home/arya/PubMed/GEO/Datasets/',split=0,linear=True,C=1,gamma=0.1):
+    import warnings
+    outpath='{}libsvm/out/'.format(path)
+    if not os.path.exists(outpath):            os.makedirs(outpath)
+    dspath='{}libsvm/train.{}.libsvm'.format(path,split)
+    start=time()
+    warnings.filterwarnings('ignore')
+    X, y = load_svmlight_file(dspath)
+    if linear:
+        model=OneVsRestClassifier(LinearSVC(random_state=0,C=C)).fit(X, y)
+    else:
+        model=OneVsRestClassifier(libsvm(random_state=0,C=C, gamma=gamma)).fit(X, y)
+    pickle.dump(model,open('{}model_{}_C{}_G{}_{}.pkl'.format(outpath,('nonlinear','linear')[linear],C,gamma,split),'wb'))
+
+    print 'learning...'
+    X, y = load_svmlight_file(dspath.replace('.train','.test'))
+    print 'predicting...'
+    deci=model.decision_function(X)
+    pred=model.predict(X)
+    labels=model.classes_
+    ranking= labels[deci.argsort()[:,::-1]]
+    print 'Accuracy:', np.mean(y==pred)
+    pickle.dump({'deci':deci,'y':y, 'pred':pred},open(outpath+'ranking.pkl','wb'))
+    print 'Done in {:.0f} minutes'.format((time()-start)/60.0)
+    return ranking
+    
 if __name__ == '__main__':
-    learn_svm2()
-#     predict_svm() 
+    get_ranking()
+    

@@ -197,8 +197,9 @@ def  merge(path):
     relations=pickle.load(open(path+'MEDLINE/raw/batch_0.pkl','rb')).keys()
     print 'Merging', relations
     for relation in relations:
-        sys.stdout = open('{}Datasets/merge_{}.log'.format(path,relation),'w')
-        sys.stderr = open('{}Datasets/merge_{}.err'.format(path,relation),'w')
+        if not os.path.exists(path+'Log'):            os.makedirs(path+'Log')
+        sys.stdout = open('{}Log/merge_{}.log'.format(path,relation),'w')
+        sys.stderr = open('{}Log/merge_{}.err'.format(path,relation),'w')
         all_batches={}
         for j in range(len( files)):
             try:
