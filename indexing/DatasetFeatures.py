@@ -66,27 +66,53 @@ def gse_paper_stats(path='/home/arya/PubMed/GEO/Datasets/'):
     plt.show()
     
 
-def create_dataset(df,PM,MeSH):
+def create_dataset(PP,PM,MeSH):
     labels, feats=[],[]
     j=0
-    for _,row in df.iterrows():
+    for _,row in PP.iterrows():
         feat={}
-        try:
-            feat.update(MeSH.loc[PM[row.cited_pmid]].value_counts().to_dict())
-        except:
-            pass
+#         try:
+#             feat.update(MeSH.loc[PM[row.cited_pmid]].value_counts().to_dict())
+#         except:
+#             pass
         try:
             feat.update(MeSH.loc[PM[row.cites_pmid]].value_counts().to_dict())
         except:
             pass
         if len(feat):
             feats.append(feat)
-            labels.append( row.did)
+            labels.append( row.cited_pmid)
         else:
             j+=1
-    print '{} were unsucessful, out of {}'.format(j,df.shape[0])
+    print '{} were unsucessful, out of {}'.format(j,PP.shape[0])
     return labels,feats
-    
+
+
+def create_dataset_multilabel(PP,PM,MeSH):
+    labels, feats=[],[]
+    j=0
+    CP=PP.cites_pmid.unique()
+    i=0
+    for cp in CP:
+#         try:
+#             feat.update(MeSH.loc[PM[row.cited_pmid]].value_counts().to_dict())
+#         except:
+#             pass
+        try:
+            feat=MeSH.loc[PM[cp]].value_counts().to_dict()
+        except:
+            pass
+        if len(feat):
+            feats.append(feat)
+            PPcp=PP.loc[cp]
+            if len(PPcp.shape)==1:
+                labels.append( [PPcp.cited_pmid])
+            else:
+                labels.append( PPcp.cited_pmid.values)
+        else:
+            j+=1
+    print '{} were unsucessful, out of {}'.format(j,PP.shape[0])
+    return labels,feats
 
 def write_libsvm_dataset(labels, feats,path):
     with open(path,'w') as f:
@@ -95,27 +121,50 @@ def write_libsvm_dataset(labels, feats,path):
             for k,v in sorted(feat.items(),key=lambda x: x[0]):
                 line+=' {}:{}'.format(k,v)
             print >>f,line
+def write_libsvm_dataset_multilabel(labels, feats,path):
+    with open(path,'w') as f:
+        for label,feat in zip(labels, feats):
+            if len(label):
+                line=', '.join(map(str,label)) 
+                line=str(label)
+                for k,v in sorted(feat.items(),key=lambda x: x[0]):
+                    line+=' {}:{}'.format(k,v)
+                print >>f,line
 
-def create_MeSH_features(path='/home/arya/PubMed/GEO/Datasets/'):
-    IDX=pickle.load(open(path+'DPP.CV.pkl','rb'))
+def create_MeSH_LibSVM_Datasets(path='/home/arya/PubMed/GEO/Datasets/'):
+    CVTrain=pd.read_pickle(path+'CVTrain.df')
     PM=clean_dic(pd.read_pickle(path+'PMeSH.pkl'))
-    DPP=pd.read_pickle(path+'DPP.df')
-    MeSH=pd.read_pickle(path+'MeSH.df').mid
-    for fold in range(len(IDX['trains'])):
-        train=DPP[DPP.sid.isin(IDX['trains'][fold])][['did','cited_pmid','cites_pmid']]
+    PP=pd.read_pickle(path+'PP.df')
+    M=pd.read_pickle(path+'MeSH.df').mid
+    for fold in range(CVTrain.shape[1]):
+        train=PP[CVTrain[fold]][['cited_pmid','cites_pmid']]
         print 'creating train dataset...', train.shape
-        labels,feats=create_dataset(train, PM,MeSH)
-#         pickle.dump({'labels':labels,'feats':feats}, open('{}train.{}.pkl'.format(path,fold),'wb'))
+        labels,feats=create_dataset(train, PM,M)
         print 'writing train dataset...'
         write_libsvm_dataset(labels, feats,'{}libsvm/train.{}.libsvm'.format(path,fold))
-        test =DPP[DPP.sid.isin(IDX['tests'][fold])][['did','cited_pmid','cites_pmid']]
+        test=PP[~CVTrain[fold]][['cited_pmid','cites_pmid']]
         print 'creating test dataset...', test.shape
-        labels,feats=create_dataset(test, PM, MeSH)
-#         pickle.dump({'labels':labels,'feats':feats}, open('{}test.{}.pkl'.format(path,fold),'wb'))
+        labels,feats=create_dataset(test, PM,M)
         print 'writing test dataset...'
         write_libsvm_dataset(labels, feats,'{}libsvm/test.{}.libsvm'.format(path,fold))
         
-
+def create_MeSH_LibSVM_MultiLabelDatasets(path='/home/arya/PubMed/GEO/Datasets/'):
+    CVTrain=pd.read_pickle(path+'CVTrain.MultiLabel.df')
+    PM=clean_dic(pd.read_pickle(path+'PMeSH.pkl')) # remove papers with no
+    PP=pd.read_pickle(path+'PP.df')
+    PP.index=PP.cites_pmid
+    M=pd.read_pickle(path+'MeSH.df').mid
+    for fold in range(CVTrain.shape[1]):
+        train=PP.loc[CVTrain[fold][CVTrain[fold]].index][['cited_pmid','cites_pmid']]
+        print 'creating train dataset...', train.cites_pmid.unique().shape[0], 'out of', PP.cites_pmid.unique().shape[0] 
+        labels,feats=create_dataset_multilabel(train, PM,M)
+        print 'writing train dataset...'
+        write_libsvm_dataset_multilabel(labels, feats,'{}libsvm/train.{}.multilabel.libsvm'.format(path,fold))
+        test=PP.loc[CVTrain[fold][~CVTrain[fold]].index][['cited_pmid','cites_pmid']]
+        print 'creating test dataset...', test.cites_pmid.shape[0], 'out of', PP.cites_pmid.shape[0]
+        labels,feats=create_dataset_multilabel(test, PM,M)
+        print 'writing test dataset...'
+        write_libsvm_dataset_multilabel(labels, feats,'{}libsvm/test.{}.multilabel.libsvm'.format(path,fold))
         
     
 def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10, original_paper_num_citation_th=1):
@@ -211,14 +260,14 @@ def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
         for fold,(train_idx, test_idx) in zip(range(n_fold),kf):
             CVTrain[fold].loc[opP.iloc[train_idx].sid]= True
             CVTrain[fold].loc[opP.iloc[test_idx ].sid]=False
-        
+    CVTrain=CVTrain.astype(bool) # critical because we are going to not this     
     print CVTrain
     print 'Number of non-NAs in each fold (column)'
     print CVTrain.count() 
     print 'Number of training cases in each fold (column)'
     print CVTrain.sum()
     print 'Making it boolean'
-    CVTrain.to_pickle(path+'CVTrain.pkl')
+    CVTrain.to_pickle(path+'CVTrain.df')
     
 def split_MultiLabel(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     from sklearn.cross_validation import KFold
@@ -232,13 +281,13 @@ def split_MultiLabel(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
         CVTrain[fold].loc[samples[test_idx]]= False
         assert( PP[PP.index.isin(CVTrain[fold].index)].cited_pmid.unique().shape[0]==PP.cited_pmid.unique().shape[0])
     
-    
+    CVTrain=CVTrain.astype(bool) # critical because we are going to not this 
     print CVTrain
     print 'Number of non-NAs in each fold (column)'
     print CVTrain.count() 
     print 'Number of training cases in each fold (column)'
     print CVTrain.sum()
-    CVTrain.to_pickle(path+'CVTrain.MultiLabel.pkl')
+    CVTrain.to_pickle(path+'CVTrain.MultiLabel.df')
 
     
 def create_GEO_Queries(path='/home/arya/PubMed/GEO/Datasets/'):
@@ -265,8 +314,10 @@ if __name__ == '__main__':
 #     create_MeSH_features_only_original_papers()
 
 #     convert_to_df(original_paper_num_citation_th=10)
-    split_MultiLabel()
-#     create_MeSH_features()
+#     split()
+#     split_MultiLabel()
+#     create_MeSH_LibSVM_Datasets()
+    create_MeSH_LibSVM_MultiLabelDatasets()
 #     create_GEO_Queries()
     print 'Done!'    
         
