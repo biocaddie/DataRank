@@ -202,15 +202,28 @@ def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     PP= pd.read_pickle(path+'PP.df')
     trains,tests= [[] for _ in range(n_fold)], [[] for _ in range(n_fold)]
     OP=PP.cited_pmid.unique()
+    CVTrain=pd.DataFrame(index=PP.sid, columns=range(n_fold))
     for op in OP:
         opP=PP.loc[PP.cited_pmid==op]
         kf = KFold(opP.shape[0], n_folds=n_fold)
-        for train, test, (train_idx, test_idx) in zip(trains,tests,kf):
-            train+= list(opP.iloc[train_idx].sid)
-            test+= list(opP.iloc[test_idx].sid)
-#         if j>2: break
-    print 'CV trains has {} and CV test has {} samples'.format(len(trains[0]), len(tests[0]))
-    pickle.dump({'trains':trains, 'tests':tests},open('{}DPP.CV.pkl'.format(path),'wb'))
+        for fold,(train_idx, test_idx) in zip(range(n_fold),kf):
+            CVTrain[fold].loc[opP.iloc[train_idx].sid]= True
+            CVTrain[fold].loc[opP.iloc[test_idx ].sid]=False
+        
+    print CVTrain
+    print 'Number of non-NAs in each fold (column)'
+    print CVTrain.count() 
+    print 'Number of training cases in each fold (column)'
+    print CVTrain.sum()
+    print 'Making it boolean'
+    CVTrain=CVTrain.astype(bool)
+    print CVTrain
+    print 'Number of non-NAs in each fold (column)'
+    print CVTrain.count() 
+    print 'Number of training cases in each fold (column)'
+    print CVTrain.sum()
+    
+    CVTrain.to_pickle(path+'CVTrain.pkl')
 
     
 def create_GEO_Queries(path='/home/arya/PubMed/GEO/Datasets/'):
@@ -236,8 +249,8 @@ if __name__ == '__main__':
 #     gse_paper_stats()
 #     create_MeSH_features_only_original_papers()
 
-    convert_to_df()
-#     split()
+#     convert_to_df()
+    split()
 #     create_MeSH_features()
 #     create_GEO_Queries()
     print 'Done!'    
