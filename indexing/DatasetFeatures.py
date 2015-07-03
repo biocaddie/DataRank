@@ -118,7 +118,10 @@ def create_MeSH_features(path='/home/arya/PubMed/GEO/Datasets/'):
 
         
     
-def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10):
+def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10, original_paper_num_citation_th=1):
+    old_stdout=sys.stdout
+    sys.stdout=open('/home/arya/PubMed/GEO/Log/convert_df.log','a')
+    print '**************************************************** OriginalPaperCitaionTh= ',original_paper_num_citation_th
     M=pickle.load(open('/home/arya/PubMed/MeSH/mesh.pkl'))
     M=pd.DataFrame(M)
     M['mid']=M.index
@@ -145,10 +148,10 @@ def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10):
     print 'PP:\nAfter Removing Duplicates and Extra Columns and those cited_pmids (original papers) that are not in DP,\nI ended up with {} rows,  {} Unique Original Papers(num_classes) and {} Unique Citations (num_samples in  multilabel classification)).\n'.format(PP.cited_pmid.shape[0], PP.cited_pmid.unique().shape[0], PP.cites_pmid.unique().shape[0])
     
     PP=PP[['cites_pmid','cited_pmid', 'cites_num_citaion']].dropna() # remove all rows with None (zero citation papers)
-    th=10
-    keep=PP.cited_pmid.value_counts()>th
+    
+    keep=PP.cited_pmid.value_counts()>=original_paper_num_citation_th
     PP=PP[PP.cited_pmid.isin(keep[keep].index)]
-    print 'PP:\nAfter Removing Original Papers whith less than {} citations,\nI ended up with {} rows,  {} Unique Original Papers(num_classes) and {} Unique Citations (num_samples in  multilabel classification)).\n'.format(th,PP.cited_pmid.shape[0], PP.cited_pmid.unique().shape[0], PP.cites_pmid.unique().shape[0])
+    print 'PP:\nAfter Removing Original Papers with less than {} citations,\nI ended up with {} rows,  {} Unique Original Papers(num_classes) and {} Unique Citations (num_samples in  multilabel classification)).\n'.format(original_paper_num_citation_th,PP.cited_pmid.shape[0], PP.cited_pmid.unique().shape[0], PP.cites_pmid.unique().shape[0])
     print 'PP is N->N relationship which max degree is ({},{})'.format(max(PP.cited_pmid.value_counts()), max(PP.cites_pmid.value_counts()) )
     PP['sid']=PP.index
     
@@ -164,7 +167,7 @@ def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10):
     with open('/home/arya/PubMed/GEO/PMID/pmid.txt','w') as f:
         for p in PMID:
             print >>f,p
-
+    sys.stdout=old_stdout
     
 def create_df(dic, columns=None):
     for k,V in dic.items():
@@ -200,7 +203,6 @@ def create_df(dic, columns=None):
 def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     from sklearn.cross_validation import KFold
     PP= pd.read_pickle(path+'PP.df')
-    trains,tests= [[] for _ in range(n_fold)], [[] for _ in range(n_fold)]
     OP=PP.cited_pmid.unique()
     CVTrain=pd.DataFrame(index=PP.sid, columns=range(n_fold))
     for op in OP:
@@ -216,14 +218,27 @@ def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     print 'Number of training cases in each fold (column)'
     print CVTrain.sum()
     print 'Making it boolean'
-    CVTrain=CVTrain.astype(bool)
+    CVTrain.to_pickle(path+'CVTrain.pkl')
+    
+def split_MultiLabel(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
+    from sklearn.cross_validation import KFold
+    PP= pd.read_pickle(path+'PP.df')
+    PP.index=PP.cites_pmid
+    samples=PP.cites_pmid.unique()
+    CVTrain=pd.DataFrame(index=samples, columns=range(n_fold))
+    kf = KFold(CVTrain.shape[0], n_folds=n_fold)
+    for fold,(train_idx, test_idx) in zip(range(n_fold),kf):
+        CVTrain[fold].loc[samples[train_idx]]= True
+        CVTrain[fold].loc[samples[test_idx]]= False
+        assert( PP[PP.index.isin(CVTrain[fold].index)].cited_pmid.unique().shape[0]==PP.cited_pmid.unique().shape[0])
+    
+    
     print CVTrain
     print 'Number of non-NAs in each fold (column)'
     print CVTrain.count() 
     print 'Number of training cases in each fold (column)'
     print CVTrain.sum()
-    
-    CVTrain.to_pickle(path+'CVTrain.pkl')
+    CVTrain.to_pickle(path+'CVTrain.MultiLabel.pkl')
 
     
 def create_GEO_Queries(path='/home/arya/PubMed/GEO/Datasets/'):
@@ -249,8 +264,8 @@ if __name__ == '__main__':
 #     gse_paper_stats()
 #     create_MeSH_features_only_original_papers()
 
-#     convert_to_df()
-    split()
+#     convert_to_df(original_paper_num_citation_th=10)
+    split_MultiLabel()
 #     create_MeSH_features()
 #     create_GEO_Queries()
     print 'Done!'    
