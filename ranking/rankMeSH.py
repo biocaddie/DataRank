@@ -31,7 +31,7 @@ def get_ranking(fold=0):
     sys.stderr=open('{}model{}.err'.format(outpath,runname),'w')
     model=OneVsRestClassifier(LinearSVC(random_state=0,C=C)).fit(X, y)
     print 'learning...'
-    X, y = load_svmlight_file(dspath.replace('.train','.test'))
+    X, y = load_svmlight_file(dspath.replace('train','test'))
     print 'predicting...'
     deci=model.decision_function(X)
     pred=model.predict(X)
@@ -54,8 +54,7 @@ def get_ranking_multilabel(fold=0):
     import warnings
     outpath='{}libsvm/out/'.format(path)
     if not os.path.exists(outpath):            os.makedirs(outpath)
-    dspath='{}libsvm/train.{}.libsvm'.format(path,fold)
-    dspath='/home/arya/libsvm/yeast'
+    dspath='{}libsvm/train.{}.multilabel.libsvm'.format(path,fold)
     start=time()
     warnings.filterwarnings('ignore')
     X, y = load_svmlight_file(dspath,multilabel=True)
@@ -66,7 +65,7 @@ def get_ranking_multilabel(fold=0):
     sys.stderr=open('{}model{}.err'.format(outpath,runname),'w')
     model=OneVsRestClassifier(LinearSVC(random_state=0,C=C)).fit(X, y)
     print 'learning...'
-    X, y = load_svmlight_file(dspath.replace('.train','.test'),multilabel=True)
+    X, y = load_svmlight_file(dspath.replace('train','test'),multilabel=True)
     print 'predicting...'
     
     deci=model.decision_function(X)
