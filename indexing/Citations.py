@@ -5,6 +5,7 @@ import multiprocessing
 import re
 import mechanize
 import urllib2
+import pandas as pd
 from bs4 import BeautifulSoup
 import MEDLINEServer
 path='/home/arya/PubMed/GEO/'   
@@ -181,18 +182,22 @@ def getLen(item):
         return len(item)
     return 0
 
+    
 def merge_saved_pickle_files():
     files = [ citations_path+f for f in os.listdir(citations_path) if os.path.isfile(os.path.join(citations_path,f)) ]
     results={}
     for f in files:
         results.update(pickle.load(open(f,'rb')))
-    fileout=path+'Datasets/{}.pkl'.format('citations')
-    pickle.dump(results, open(fileout,'wb'))
-    print 'Merging {} citation files is done at {}!'.format(len(files),fileout)
+    fileout=path+'Datasets/PP.df'
+    PP=create_df(results, columns=('cited_pmid','cites_doi','cites_pmid','cites_title', 'cites_num_citaion'))
+    PP.drop_duplicates(inplace=True)
+    PP.drop(['cites_doi','cites_title'], axis=1, inplace=True)
+    PP.to_pickle(fileout)
+    print 'Merging {} citation files is done at {}'.format(len(files),fileout)
 
 if __name__ == '__main__':
-    save_citations(num_threads=15)
-#     merge_saved_pickle_files()
-    
+#     save_citations(num_threads=15)
+    merge_saved_pickle_files()
+    print 'Done'
         
 

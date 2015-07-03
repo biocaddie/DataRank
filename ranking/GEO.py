@@ -6,6 +6,7 @@ Created on Jun 29, 2015
 from Bio import Entrez
 import pandas as pd
 import numpy as np
+from Measure import MRR,AP
 Entrez.email="a@a.com"
 D=pd.read_pickle('/home/arya/PubMed/GEO/Datasets/D.df')
 
@@ -24,83 +25,28 @@ def query_geo(query):
     did= (D.loc[dname].did).fillna(-1).values.astype(int)
     return did,dname
 
-def AP(ranking, targets, k=25):
-    """average precision"""
-    ranking=np.array(ranking[:k])
-    results=np.array([])
-    for tt in targets:
-        results =np.append(results, np.where(ranking==tt)[0])
-    results +=1
-    print '{} hits in top {}'.format(len(results),k)
-    return  len(results)/float(k)
-        
-
-def MRR(ranking, targets, k=20):
-    """mean reciprocal rank"""
-    """average precision"""
-    ranking=np.array(ranking[:k])
-    results=np.array([])
-    for tt in targets:
-        results =np.append(results, np.where(ranking==tt)[0])
-    if len(results):
-        results +=1
-        print '{} is 1st hit in top {}'.format(min(results),k)
-        return  1.0/min(results)
-    else:
-        print 'No hit in top',k
-        return 0
-    
+def create_GEO_Queries(path='/home/arya/PubMed/GEO/Datasets/'):
+    PP=pd.read_pickle(path+'PP.df')[['cites_pmid','cited_pmid']]
+    PP.index=PP.cites_pmid
+    PP.drop('cites_pmid',axis=1,inplace=True)
+    PM=pd.read_pickle(path+'PMeSH.df')
+    PM.index=PM.pmid
+    PM.drop(['pmid','mid'],axis=1, inplace=True)
+    PMID=PP.index.unique()
+    M=pd.read_pickle(path+'MeSH.df').name
+    for pmid in PMID:
+        muid=PM[pmid]
+        names=M.loc[muid]
+        break
         
 if __name__ == '__main__':
-#     print AP(a,t)
-#     print MRR(a,t)
-    query='GSE69636'
-    query='Lead exposure induces changes 5-hydroxymethylcytosine clusters'
-    query='Lead exposure'
-    query="A systems biology approach reveals a link between systemic cytokines and skeletal muscle energy metabolism in a rodent smoking model and human COPD"
-    query="A systems biology approach"
-    query="A systems biology approach home"
-    query=query.replace(' ', '[All Fields] OR ')
-    q="""Acrolein/toxicity*
-Cell Movement/drug effects*
-Endothelium, Vascular/cytology
-Endothelium, Vascular/drug effects*
-Human Umbilical Vein Endothelial Cells
-Humans
-Insulin Resistance*
-MicroRNAs/genetics*""".replace('*','').split('\n')
-    t=map(lambda x: x.split('/'),q)
-    qm=[]
-    for item in t:
-        qm+=item
-    qm=['Acrolein',
- 'toxicity',
- 'Cell Movement',
- 'drug effects',
- 'Endothelium, Vascular',
- 'cytology',
- 'Endothelium, Vascular',
- 'drug effects',
- 'Human Umbilical Vein Endothelial Cells',
- 'Humans',
- 'Insulin Resistance',
- 'MicroRNAs',
- 'genetics']
-    
-    
-    qm=['Acrolein']
-    
-    q=''
-    for i in qm:
-        q+='\"{}\"[All Fields] OR'.format(i)
-    query=q
-    result,dname= query_geo(query)
-    result=dname
-    tar=['GSE56782']
-    k=1000
-    print AP(result,tar,k)
-    print MRR(result,tar,k)
-    print  len(result)
-    
+#     query="A systems biology approach"
+#     result,dname= query_geo(query)
+#     result=dname
+#     tar=['GSE56782']
+#     print AP(result,tar)
+#     print MRR(result,tar)
+#     print  len(result)
+#     create_GEO_Queries()
     print 'Done'
 

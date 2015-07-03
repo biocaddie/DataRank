@@ -6,6 +6,7 @@ Created on Jun 19, 2015
 import pickle,sys,multiprocessing,os
 import traceback
 from Bio import Entrez
+import pandas as pd
 Entrez.email="a@a.com"
 
 
@@ -173,12 +174,9 @@ def mergeBatchResults(path):
         fileout=path+'Datasets/{}.pkl'.format(k)
         pickle.dump(v,open(fileout,'wb'))
 
-
-
-
-def parse(path,num_threads=5):
+def parseMEDLINE(path,num_threads=15):
     num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
-    fileout=path+'Datasets/parse.pkl'
+    fileout=path+'Log/parseMEDLINE.pkl'
     sys.stdout = open(fileout.replace('.pkl','.log'),'w')
     sys.stderr = open(fileout.replace('.pkl','.err'),'w')
     start=0
@@ -192,7 +190,7 @@ def parse(path,num_threads=5):
 def get_all_files_in_dir(path):
     return [ path+f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
 
-def  merge(path):
+def  mergeMEDLINE(path):
     files =[f for f in get_all_files_in_dir(path+'MEDLINE/raw/') if f[-4:]=='.pkl']
     relations=pickle.load(open(path+'MEDLINE/raw/batch_0.pkl','rb')).keys()
     print 'Merging', relations
@@ -216,7 +214,7 @@ def  merge(path):
                             all_batches[k]=v
             except:
                 print >> sys.stderr, files[j]
-        pickle.dump(all_batches,open('{}Datasets/{}.pkl'.format(path,relation),'wb'))
+    pd.DataFrame(all_batches).to_pickle('{}Datasets/{}.df'.format(path,relation))
 
 def word_cloud():    
     import matplotlib.pyplot as plt
@@ -229,12 +227,44 @@ def word_cloud():
     plt.show()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
     
-    
+def parseMeSH(path='/home/arya/PubMed/MeSH/desc2015.xml'):
+    from ParseMeSHXML import parse_mesh 
+    from MEDLINEDatabase import MeSHDB
+    records=parse_mesh(path)
+    db=MeSHDB()
+    for r in records:
+        db.mesh.id.append(r.ui)
+        db.mesh.name.append(r.name)
+        for c in r.concepts:
+            db.concept.id.append(c.ui)
+            db.concept.name.append(c.name)
+            for t in c.terms:
+                db.entryTerm.name.append(t.name)
+                db.entryTerm.id.append(t.ui)
+    pickle.dump(db,open(path.replace('.xml','.pkl'),'wb'))
+    M={'uid':db.mesh.id,'name':db.mesh.name}
+    pickle.dump(M,open(path.replace('desc2015.xml','mesh.pkl'),'wb'))
+    M=pickle.load(open('/home/arya/PubMed/MeSH/mesh.pkl'))
+    M=pd.DataFrame(M)
+    M['mid']=M.index
+    M.index=M.uid    
+    print 'MeSH Dictionary has {} terms ({} are distinct)'.format(M.uid.shape[0], M.uid.unique().shape[0])
+    M.drop('uid',axis=1,inplace=True)
+    M.to_pickle('/home/arya/PubMed/GEO/Datasets/M.df')
+
+    return db    
+
+
 if __name__ == '__main__':
     from time import time
     s=time()
     path='/home/arya/PubMed/GEO/'
-    print path
-#     parse(path)
-    merge(path)
+    parseMeSH()
+    parseMEDLINE(path)
+    mergeMEDLINE(path)
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
+
+
+
+
+

@@ -8,6 +8,7 @@ import pickle,sys,multiprocessing,os, traceback
 from Bio import Entrez
 Entrez.email="a@a.com"
 from ftplib import FTP
+import pandas as pd
 outpath='/home/arya/PubMed/GEO/GSE/'
 num_threads=20
 if not os.path.exists(outpath):            os.makedirs(outpath)
@@ -98,14 +99,14 @@ def parse_one(path):
         print >> sys.stderr, '{}\n{}\n***********'.format(path,traceback.format_exc())
         return None
 
-def merge():
+def mergeMEDLINE():
     data_outpath=outpath.replace('GSE','Datasets')
     if not os.path.exists(data_outpath):            os.makedirs(data_outpath)
     all_gse=[x for x in pickle.load(open(outpath+'GSE.pkl','rb')) if x is not None]
     dic={}
     for item in all_gse:
         dic.update(item)
-    pickle.dump(dic, open(data_outpath+'DP.pkl','wb'))
+    pd.to_pickle(dic, open(data_outpath+'DP.pkl','wb'))
 #     gse_pmid = {key: value['pmid'] for (key, value) in dic.items()}
 #     pickle.dump(gse_pmid, open(data_outpath+'gse_pmid.pkl','wb'))
 #     gse_title = {key: value['title'] for (key, value) in dic.items()}
@@ -125,6 +126,6 @@ if __name__ == '__main__':
 #     get_paths()
 #     download()
 #     parse_all()
-    merge()
+    mergeMEDLINE()
     
     

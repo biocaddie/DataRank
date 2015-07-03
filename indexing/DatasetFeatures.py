@@ -92,7 +92,6 @@ def create_dataset_multilabel(PP,PM,MeSH):
     labels, feats=[],[]
     j=0
     CP=PP.cites_pmid.unique()
-    i=0
     for cp in CP:
 #         try:
 #             feat.update(MeSH.loc[PM[row.cited_pmid]].value_counts().to_dict())
@@ -150,20 +149,22 @@ def create_MeSH_LibSVM_Datasets(path='/home/arya/PubMed/GEO/Datasets/'):
         
 def create_MeSH_LibSVM_MultiLabelDatasets(path='/home/arya/PubMed/GEO/Datasets/'):
     CVTrain=pd.read_pickle(path+'CVTrain.MultiLabel.df')
+    sys.stdout=open(path.replace('Datasets','Log')+'create.multilabel.log','w')
+    sys.stderr=open(path.replace('Datasets','Log')+'create.multilabel.err','w')
     PM=clean_dic(pd.read_pickle(path+'PMeSH.pkl')) # remove papers with no
     PP=pd.read_pickle(path+'PP.df')
     PP.index=PP.cites_pmid
     M=pd.read_pickle(path+'MeSH.df').mid
     for fold in range(CVTrain.shape[1]):
         train=PP.loc[CVTrain[fold][CVTrain[fold]].index][['cited_pmid','cites_pmid']]
-        print 'creating train dataset...', train.cites_pmid.unique().shape[0], 'out of', PP.cites_pmid.unique().shape[0] 
-        labels,feats=create_dataset_multilabel(train, PM,M)
-        print 'writing train dataset...'
+        print 'creating train dataset...', train.cites_pmid.unique().shape[0], 'out of', PP.cites_pmid.unique().shape[0], sys.stdout.flush() 
+        labels,feats=create_dataset_multilabel(train, PM, M)
+        print 'writing train dataset...', sys.stdout.flush()
         write_libsvm_dataset_multilabel(labels, feats,'{}libsvm/train.{}.multilabel.libsvm'.format(path,fold))
         test=PP.loc[CVTrain[fold][~CVTrain[fold]].index][['cited_pmid','cites_pmid']]
-        print 'creating test dataset...', test.cites_pmid.shape[0], 'out of', PP.cites_pmid.shape[0]
-        labels,feats=create_dataset_multilabel(test, PM,M)
-        print 'writing test dataset...'
+        print 'creating test dataset...', test.cites_pmid.unique().shape[0], 'out of', PP.cites_pmid.unique().shape[0], sys.stdout.flush()
+        labels,feats=create_dataset_multilabel(test, PM, M)
+        print 'writing test dataset...', sys.stdout.flush()
         write_libsvm_dataset_multilabel(labels, feats,'{}libsvm/test.{}.multilabel.libsvm'.format(path,fold))
         
     
@@ -171,12 +172,7 @@ def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10, original_pap
     old_stdout=sys.stdout
     sys.stdout=open('/home/arya/PubMed/GEO/Log/convert_df.log','a')
     print '**************************************************** OriginalPaperCitaionTh= ',original_paper_num_citation_th
-    M=pickle.load(open('/home/arya/PubMed/MeSH/mesh.pkl'))
-    M=pd.DataFrame(M)
-    M['mid']=M.index
-    M.index=M.uid
-    print 'MeSH Dictionary has {} terms ({} are distinct)'.format(M.uid.shape[0], M.uid.unique().shape[0])
-    M.drop('uid',axis=1,inplace=True)
+    
     
     
     
@@ -190,9 +186,7 @@ def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10, original_pap
     D.drop('dname',axis=1, inplace=True)
     
     
-    PP=create_df(pickle.load(open(path+'citations.pkl','rb')), columns=('cited_pmid','cites_doi','cites_pmid','cites_title', 'cites_num_citaion'))
-    PP.drop_duplicates(inplace=True)
-    PP.drop(['cites_doi','cites_title'], axis=1, inplace=True)
+    PP=pd.read_pickle(path+'PP.df')
     PP=PP[PP.cited_pmid.isin(DP.pmid.unique())]
     print 'PP:\nAfter Removing Duplicates and Extra Columns and those cited_pmids (original papers) that are not in DP,\nI ended up with {} rows,  {} Unique Original Papers(num_classes) and {} Unique Citations (num_samples in  multilabel classification)).\n'.format(PP.cited_pmid.shape[0], PP.cited_pmid.unique().shape[0], PP.cites_pmid.unique().shape[0])
     
@@ -204,7 +198,7 @@ def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10, original_pap
     print 'PP is N->N relationship which max degree is ({},{})'.format(max(PP.cited_pmid.value_counts()), max(PP.cites_pmid.value_counts()) )
     PP['sid']=PP.index
     
-    DPP = pd.merge(DP,PP, left_on=['pmid'] ,right_on=[ 'cited_pmid'])
+    DPP = pd.mergeMEDLINE(DP,PP, left_on=['pmid'] ,right_on=[ 'cited_pmid'])
     print '\nDPP:\nAfter Merging DP with PP,\nDPP ended up with {} rows, {} unique datasets, {} unique original papers and {} unique cited papers'.format(DPP.shape[0], DPP.did.unique().shape[0], DPP.cited_pmid.unique().shape[0], DPP.cites_pmid.unique().shape[0])
     
     DPP.to_pickle(path+'DPP.df')
@@ -218,37 +212,6 @@ def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10, original_pap
             print >>f,p
     sys.stdout=old_stdout
     
-def create_df(dic, columns=None):
-    for k,V in dic.items():
-        if V:
-            for v in V:
-                if isinstance(v,tuple):
-                    is_tuple=True
-                else:
-                    is_tuple=False
-            break
-    tuples=[]
-    if is_tuple:
-        for k,V in dic.items():
-            if V:
-                for v in V:
-                    tuples.append((k,)+v)
-            else:
-                tuples.append((k,V))
-    else:
-        for k,V in dic.items():
-            if V:
-                for v in V:
-                    tuples.append((k,v))
-            else:
-                tuples.append((k,V))
-    if columns:
-        return pd.DataFrame(tuples,columns=columns )
-    else:
-        return pd.DataFrame(tuples)
-
-
-
 def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     from sklearn.cross_validation import KFold
     PP= pd.read_pickle(path+'PP.df')
@@ -290,23 +253,6 @@ def split_MultiLabel(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     CVTrain.to_pickle(path+'CVTrain.MultiLabel.df')
 
     
-def create_GEO_Queries(path='/home/arya/PubMed/GEO/Datasets/'):
-    DPP= pd.read_pickle(path+'DPP.df')   
-    PM= pd.read_pickle(path+'PMeSH.pkl')
-    IDX=pd.read_pickle(path+'DPP.CV.pkl')
-    M=pd.read_pickle(path+'MeSH.df').name
-    labels=[]
-    queries=[]
-    for i in range(len(IDX['tests'])):
-    	pmid=DPP.loc[IDX['tests'][i]].cites_pmid.values
-    	for p in pmid:
-#     	    DPP[DPP.cites_pmid=='24347632'] 
-    	    muid=PM[p]
-    	    names=M.loc[muid]
-        break
-
-
-
 if __name__ == '__main__':
     
 #     gse_dataset_stats()

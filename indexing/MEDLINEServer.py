@@ -68,11 +68,11 @@ class MEDLINEServer:
     
     @staticmethod 
     def loadPMIDs(path):
-        return np.array(list(set(map(str.strip, open(path+'PMID/gse_pmid.txt').readlines()))))
+        return np.array(list(set(map(str.strip, open(path).readlines()))))
     
     @staticmethod
     def getNumRecsordsInBatch(fname):
-        records = Entrez.parse(open(fname))
+        records = Entrez.parseMEDLINE(open(fname))
         i=0
         for record in records:
             i+=1
@@ -131,14 +131,13 @@ class MEDLINEServer:
     
     @staticmethod
     def saveMEDLINE(path, num_threads):
-        PMID=MEDLINEServer.loadPMIDs(path)
+        PMID=MEDLINEServer.loadPMIDs(path+'PMID/pmid.txt')
         outPath=path+'MEDLINE/'
         if not os.path.exists(outPath): os.makedirs(outPath)
         outPath+='raw/'
         if not os.path.exists(outPath): os.makedirs(outPath)
         N = len(PMID)
         batch_size=10000
-        
         num_batches= N/batch_size  +1
         print 'Num PMIDs: {}    Num Batches: {}    Num Threads: {}'.format(N,num_batches, num_threads)
         start=0

@@ -5,7 +5,7 @@ import re;
 from DBUtil import *
 import string
 
-def parse(abs):
+def parseMEDLINE(abs):
     """
     Extracts abstract and ignores the tags extra white spaces within abstracts.
     """
@@ -179,7 +179,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parse-clean', 'delete_tables':0, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'th':0}
+    param={'src':'/home/public/hctest.db','dst':'/home/public/abstracts.db','pipeline':'parseMEDLINE-clean', 'delete_tables':0, 'resume':False, 'R':'parseMEDLINE-clean', 'batchsize':5000, 'th':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
