@@ -119,57 +119,53 @@ def create_MeSH_features(path='/home/arya/PubMed/GEO/Datasets/'):
         
     
 def convert_to_df(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10):
-    mesh=pickle.load(open('/home/arya/PubMed/MeSH/mesh.pkl'))
-    mesh=pd.DataFrame(mesh)
-    mesh['mid']=mesh.index
-    mesh.index=mesh.uid
-    mesh.drop('uid',axis=1,inplace=True)
-    mesh.to_pickle(path+'MeSH.df')
+    M=pickle.load(open('/home/arya/PubMed/MeSH/mesh.pkl'))
+    M=pd.DataFrame(M)
+    M['mid']=M.index
+    M.index=M.uid
+    print 'MeSH Dictionary has {} terms ({} are distinct)'.format(M.uid.shape[0], M.uid.unique().shape[0])
+    M.drop('uid',axis=1,inplace=True)
+    
+    
     
     DP = pd.DataFrame([value.values() for (_, value) in pickle.load(open(path+'DP.pkl','rb')).items()], columns=('pmid','title','dname','summary'))
     DP.drop_duplicates(inplace=True)
     DP['did']=DP.index
-    DP.to_pickle(path+'DP.df')
+    DP=DP[['did','dname', 'pmid']].dropna()
+    print 'DP:\n{} Dataset conneced to {} Original Papers (with pmids not DOI and title). (i.e., N->1  Relationship with max degree ({},{}))\n'.format(DP.dname.unique().shape[0], DP.pmid.unique().shape[0], max(DP.dname.value_counts()), max(DP.pmid.value_counts()) )
     D=DP[['did','dname']].dropna()
     D.index=D.dname
     D.drop('dname',axis=1, inplace=True)
-    D.to_pickle(path+'D.df')
+    
     
     PP=create_df(pickle.load(open(path+'citations.pkl','rb')), columns=('cited_pmid','cites_doi','cites_pmid','cites_title', 'cites_num_citaion'))
     PP.drop_duplicates(inplace=True)
     PP.drop(['cites_doi','cites_title'], axis=1, inplace=True)
-    PP.to_pickle(path+'PP.df')
+    PP=PP[PP.cited_pmid.isin(DP.pmid.unique())]
+    print 'PP:\nAfter Removing Duplicates and Extra Columns and those cited_pmids (original papers) that are not in DP,\nI ended up with {} rows,  {} Unique Original Papers(num_classes) and {} Unique Citations (num_samples in  multilabel classification)).\n'.format(PP.cited_pmid.shape[0], PP.cited_pmid.unique().shape[0], PP.cites_pmid.unique().shape[0])
     
+    PP=PP[['cites_pmid','cited_pmid', 'cites_num_citaion']].dropna() # remove all rows with None (zero citation papers)
+    th=10
+    keep=PP.cited_pmid.value_counts()>th
+    PP=PP[PP.cited_pmid.isin(keep[keep].index)]
+    print 'PP:\nAfter Removing Original Papers whith less than {} citations,\nI ended up with {} rows,  {} Unique Original Papers(num_classes) and {} Unique Citations (num_samples in  multilabel classification)).\n'.format(th,PP.cited_pmid.shape[0], PP.cited_pmid.unique().shape[0], PP.cites_pmid.unique().shape[0])
+    print 'PP is N->N relationship which max degree is ({},{})'.format(max(PP.cited_pmid.value_counts()), max(PP.cites_pmid.value_counts()) )
+    PP['sid']=PP.index
+    
+    DPP = pd.merge(DP,PP, left_on=['pmid'] ,right_on=[ 'cited_pmid'])
+    print '\nDPP:\nAfter Merging DP with PP,\nDPP ended up with {} rows, {} unique datasets, {} unique original papers and {} unique cited papers'.format(DPP.shape[0], DPP.did.unique().shape[0], DPP.cited_pmid.unique().shape[0], DPP.cites_pmid.unique().shape[0])
+    
+    DPP.to_pickle(path+'DPP.df')
+    PP.to_pickle(path+'PP.df')
+    D.to_pickle(path+'D.df')
+    M.to_pickle(path+'MeSH.df')
+    DP.to_pickle(path+'DP.df')
     PMID=set.union(set(PP.cited_pmid.values),set(PP.cites_pmid.values))
-    print  'writing all pmids in PMID folder for download'
     with open('/home/arya/PubMed/GEO/PMID/pmid.txt','w') as f:
         for p in PMID:
             print >>f,p
-    
-    
-    M= PP.shape[0]
-    N=PP['cited_pmid'].unique().shape[0]
-    print 'Dropping NA...'
-    PP=PP[['cites_pmid','cited_pmid', 'cites_num_citaion']].dropna() # remove all rows with None (zero citation papers)
-    PP.index=PP.cited_pmid
-    th=46
-    print 'Dropping cited paper with less than {} citations...'.format(th)
-    keep=PP['cited_pmid'].value_counts()>=th
-    keep=keep[keep].index
-    PP=PP.loc[keep]
-    print 'Dropping cited paper with less than 1 citations...'
-    PP=PP[~(PP.cites_num_citaion=='0')]
-    print 'of {} original papers, {} have more than {} citations, (removing {}) '.format(N, len(keep), th, N -len(keep))
-    print 'of {} citations, {} are corresponding to labels with more than {} samples'.format(M,PP.shape[0],th)
-    DP=pd.read_pickle(path+'DP.df')[['did','dname', 'pmid']].dropna()
-    print 'Remove duplicate classes (original papers with more than one datasets)...'
-    DP=DP[~DP.pmid.duplicated()] # 
-    DPP = pd.merge(DP,PP, left_on=['pmid'] ,right_on=[ 'cited_pmid'])
-    print 'of {} samples and {} classes (datasets) after joining with {} original papers'.format(DPP.shape[0], DPP.did.unique().shape[0], DPP.cited_pmid.unique().shape[0])
-    DPP.drop('pmid', axis=1, inplace=True)
-    DPP['sid']=DPP.index
-    DPP.to_pickle(path+'DPP.df')
 
+    
 def create_df(dic, columns=None):
     for k,V in dic.items():
         if V:
@@ -201,18 +197,17 @@ def create_df(dic, columns=None):
 
 
 
-def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=10):
-    import numpy as np
+def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     from sklearn.cross_validation import KFold
-    DPP= pd.read_pickle(path+'DPP.df')
+    PP= pd.read_pickle(path+'PP.df')
     trains,tests= [[] for _ in range(n_fold)], [[] for _ in range(n_fold)]
-    DID=DPP.did.unique()
-    for did in DID:
-        DPPdid=DPP.loc[DPP.did==did]
-        kf = KFold(DPPdid.shape[0], n_folds=n_fold)
+    OP=PP.cited_pmid.unique()
+    for op in OP:
+        opP=PP.loc[PP.cited_pmid==op]
+        kf = KFold(opP.shape[0], n_folds=n_fold)
         for train, test, (train_idx, test_idx) in zip(trains,tests,kf):
-            train+= list(DPPdid.iloc[train_idx].sid)
-            test+= list(DPPdid.iloc[test_idx].sid)
+            train+= list(opP.iloc[train_idx].sid)
+            test+= list(opP.iloc[test_idx].sid)
 #         if j>2: break
     print 'CV trains has {} and CV test has {} samples'.format(len(trains[0]), len(tests[0]))
     pickle.dump({'trains':trains, 'tests':tests},open('{}DPP.CV.pkl'.format(path),'wb'))
@@ -221,6 +216,20 @@ def split(path='/home/arya/PubMed/GEO/Datasets/', n_fold=10):
 def create_GEO_Queries(path='/home/arya/PubMed/GEO/Datasets/'):
     DPP= pd.read_pickle(path+'DPP.df')   
     PM= pd.read_pickle(path+'PMeSH.pkl')
+    IDX=pd.read_pickle(path+'DPP.CV.pkl')
+    M=pd.read_pickle(path+'MeSH.df').name
+    labels=[]
+    queries=[]
+    for i in range(len(IDX['tests'])):
+    	pmid=DPP.loc[IDX['tests'][i]].cites_pmid.values
+    	for p in pmid:
+#     	    DPP[DPP.cites_pmid=='24347632'] 
+    	    muid=PM[p]
+    	    names=M.loc[muid]
+        break
+
+
+
 if __name__ == '__main__':
     
 #     gse_dataset_stats()
@@ -228,10 +237,10 @@ if __name__ == '__main__':
 #     create_MeSH_features_only_original_papers()
 
     convert_to_df()
-    split()
+#     split()
 #     create_MeSH_features()
-    
-    
+#     create_GEO_Queries()
+    print 'Done!'    
         
     
     

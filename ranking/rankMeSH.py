@@ -49,7 +49,7 @@ def get_ranking(split=0):
 if __name__ == '__main__':
     global linear
     linear=True
-    numthreads=3
+    numthreads=1
     print 'Training', ('Nonlinear','Linear')[linear]
     if numthreads==1:
         for split in range(10):
@@ -58,10 +58,4 @@ if __name__ == '__main__':
         pool=multiprocessing.Pool(numthreads)
         pool.map(get_ranking,range(10))
     linear=False
-    if numthreads==1:
-        for split in range(10):
-                get_ranking(split)
-    else:
-        pool=multiprocessing.Pool(numthreads)
-        pool.map(get_ranking,range(10))
     print 'Done'

@@ -68,13 +68,7 @@ class MEDLINEServer:
     
     @staticmethod 
     def loadPMIDs(path):
-        PMID=[]
-        files = [ f for f in os.listdir(path+'PMID/') if os.path.isfile(os.path.join(path+'PMID/',f)) ]
-        for f in files:
-            if f[-4:] != '.txt':
-                continue
-            PMID+=map(str.strip, open(path+'PMID/'+f).readlines())
-        return np.array(list(set(PMID)))
+        return np.array(list(set(map(str.strip, open(path+'PMID/gse_pmid.txt').readlines()))))
     
     @staticmethod
     def getNumRecsordsInBatch(fname):
