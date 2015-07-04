@@ -173,6 +173,7 @@ def  mergeMEDLINE(path):
     sys.stdout = open('{}Log/mergeMEDLINE.log'.format(path),'w')
     sys.stderr = open('{}Log/mergeMEDLINE.err'.format(path),'w')
     print 'Merging', relations
+    columns={'RD':('rname','dname'),'PD':('pmid','dname'), 'PL':('pmid','lang'), 'PM':('pmid','muid'),'PA':('pmid','name','family','initial'),'P':('pmid','title','year','month','doi','abstract','jid','jname') }
     for relation in relations:
         print relation
         All={}
@@ -192,17 +193,15 @@ def  mergeMEDLINE(path):
             except:
                 print >> sys.stderr, files[j]
         if relation == 'PA':
-            All=pd.DataFrame(convertDicofListofTuples_listofTuples(All),columns=('pmid','name','family','initial'))
+            All=convertDicofListofTuples_listofTuples(All)
         elif relation in ['RD','PD', 'PL', 'PM' ]:
-            All=pd.DataFrame(convertDicofList_listofTuples(All))
+            All=convertDicofList_listofTuples(All)
         elif relation =='P':
-            All=pd.DataFrame(All).transpose()
-            All.columns=('title','year','month','doi','abstract','jid','jname')
-            All.index.name='pmid'
+            All=map(lambda (k,v): [k]+v,All.items())
         else:
             print >> sys.stderr , 'No ralation named', relation
             exit()
-        All.to_pickle('{}Datasets/{}.df'.format(path,relation)) 
+        pd.DataFrame(All,columns=columns[relation]).to_pickle('{}Datasets/{}.df'.format(path,relation)) 
 
 def word_cloud():    
     import matplotlib.pyplot as plt
@@ -251,9 +250,7 @@ def parseMeSH(path='/home/arya/PubMed/MeSH/desc2015.xml'):
     M=pickle.load(open('/home/arya/PubMed/MeSH/mesh.pkl'))
     M=pd.DataFrame(M)
     M['mid']=M.index
-    M.index=M.uid    
     print 'MeSH Dictionary has {} terms ({} are distinct)'.format(M.uid.shape[0], M.uid.unique().shape[0])
-    M.drop('uid',axis=1,inplace=True)
     M.to_pickle('/home/arya/PubMed/GEO/Datasets/M.df')
     return db    
 
