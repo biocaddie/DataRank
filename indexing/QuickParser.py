@@ -93,19 +93,19 @@ def getAuthor(article):
     alist=[]
     try:
         for item in article['AuthorList']:
-            author={}
+            author=(None,None,None)
             try:
-                author['name']=item['ForeName']
+                author[0]=item['ForeName']
             except:
-                author['name']=None
+                pass
             try:
-                author['family']=item['LastName']
+                author[1]=item['LastName']
             except:
-                author['family']=None
+                pass
             try:
-                author['initial']=item['Initials']
+                author[2]=item['Initials']
             except:
-                author['initial']=None
+                pass
             alist.append(author)
         return alist
     except:
@@ -117,27 +117,21 @@ def getLanguage(article):
         return None
 
 def parseBatch(path):
-    batch = {'PJournal':{}, 'PDate':{}, 'PAbstract':{},'PData':{},'RData':{},'PAuthor':{},'PMeSH':{},'PLanguage':{}, 'PDOI':{}, 'PTitle':{}}
+    batch = {'P':{},'PD':{},'RD':{},'PA':{},'PM':{},'PL':{}}
     f=open(path)
-#     f = Entrez.efetch(db='pubmed',id='10540283', retmode="xml")
-#     f = Entrez.efetch(db='pubmed',id='19897313', retmode="xml")
     records = Entrez.parse(f)
     try:
         for record in records:
             if 'MedlineCitation' in record.keys():
                 rec=record['MedlineCitation']
                 pmid=str(rec['PMID'])
-                batch['PMeSH'][pmid]=getMeSH(rec)
-                batch['PJournal'][pmid]={'jid':getJID(rec), 'jname':getJname(rec)}
+                batch['PM'][pmid]=getMeSH(rec)
                 if 'Article' in rec.keys():
                     article=rec['Article']
-                    batch['PData'],batch['RData']=getDatasets(pmid, article , batch['PData'],batch['RData'])
-                    batch['PAbstract'][pmid]    = getAbstract(article)
-                    batch['PDate'][pmid]        = {'year':getYear(article),'month':getMonth(article)}
-                    batch['PAuthor'][pmid]      =getAuthor(article)
-                    batch['PLanguage'][pmid]    =getLanguage(article)
-                    batch['PDOI'][pmid]         = getDOI(record)
-                    batch['PTitle'][pmid]       = getTitle(article)
+                    batch['PD'],batch['RD']=getDatasets(pmid, article , batch['PD'],batch['RD'])
+                    batch['PA'][pmid]      =getAuthor(article)
+                    batch['PL'][pmid]    =getLanguage(article)
+                    batch['P'][pmid]       = [getTitle(article), getYear(article), getMonth(article),getDOI(record), getAbstract(article), getJID(rec), getJname(rec)]
     except:
         print >> sys.stderr, '{}\n{}\n***********'.format(path,traceback.format_exc())
     print path 
@@ -154,25 +148,6 @@ def process_data_stats(path=None):
     print  '-------------------------------\n{:20}{:10}{:10}\n'.format('Total',sum(map(lambda (k,u,v):u,rd)),sum(map(lambda (k,u,v):v,rd)))
     print  'Until Batch {:5}, {:7} datasets are found {:7} papers'.format(data['iter'], sum(map(len,data['PD'].values())),len(data['PD'].keys()))
 
-def mergeBatchResults(path):
-    P,PD,RD,PA,PM,PL, PDOI, PT={},{},{},{},{},{},{}, {}
-    for batch in None:
-        P.update(batch['P'])
-        PD.update(batch['PD'])
-        PA.update(batch['PA'])
-        PM.update(batch['PM'])
-        PL.update(batch['PL'])
-        PT.update(batch['PT'])
-        PDOI.update(batch['PDOI'])
-        for k,v in batch['RD'].items():
-            if k in RD.keys():
-                for i in v:
-                    RD[k].append(i)
-            else:
-                RD[k]=v
-    for (k,v) in None.items():
-        fileout=path+'Datasets/{}.pkl'.format(k)
-        pickle.dump(v,open(fileout,'wb'))
 
 def parseMEDLINE(path,num_threads=15):
     num_batches = max(map(lambda x: int(x.split('_')[1].split('.')[0]),[ f for f in os.listdir(path+'MEDLINE/raw/') if os.path.isfile(os.path.join(path+'MEDLINE/raw/',f)) ]))+1
@@ -187,34 +162,47 @@ def parseMEDLINE(path,num_threads=15):
             parseBatch(p)
     else:
         multiprocessing.Pool(num_threads).map(parseBatch,param)
+        
 def get_all_files_in_dir(path):
     return [ path+f for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) ]
 
 def  mergeMEDLINE(path):
     files =[f for f in get_all_files_in_dir(path+'MEDLINE/raw/') if f[-4:]=='.pkl']
     relations=pickle.load(open(path+'MEDLINE/raw/batch_0.pkl','rb')).keys()
+    if not os.path.exists(path+'Log'):            os.makedirs(path+'Log')
+    sys.stdout = open('{}Log/mergeMEDLINE.log'.format(path),'w')
+    sys.stderr = open('{}Log/mergeMEDLINE.err'.format(path),'w')
     print 'Merging', relations
     for relation in relations:
-        if not os.path.exists(path+'Log'):            os.makedirs(path+'Log')
-        sys.stdout = open('{}Log/merge_{}.log'.format(path,relation),'w')
-        sys.stderr = open('{}Log/merge_{}.err'.format(path,relation),'w')
-        all_batches={}
+        print relation
+        All={}
         for j in range(len( files)):
             try:
                 batch=pickle.load(open(files[j],'rb'))[relation]
                 print j,files[j],len(batch), sys.stdout.flush()
-                if relation != 'RData' :
-                    all_batches.update(batch)
+                if relation != 'RD' :
+                    All.update(batch)
                 else:
                     for k,v in batch.items():
-                        if k in all_batches.keys():
+                        if k in All.keys():
                             for i in v:
-                                all_batches[k].append(i)
+                                All[k].append(i)
                         else:
-                            all_batches[k]=v
+                            All[k]=v
             except:
                 print >> sys.stderr, files[j]
-    pd.DataFrame(all_batches).to_pickle('{}Datasets/{}.df'.format(path,relation))
+        if relation == 'PA':
+            All=pd.DataFrame(convertDicofListofTuples_listofTuples(All),columns=('pmid','name','family','initial'))
+        elif relation in ['RD','PD', 'PL', 'PM' ]:
+            All=pd.DataFrame(convertDicofList_listofTuples(All))
+        elif relation =='P':
+            All=pd.DataFrame(All).transpose()
+            All.columns=('title','year','month','doi','abstract','jid','jname')
+            All.index.name='pmid'
+        else:
+            print >> sys.stderr , 'No ralation named', relation
+            exit()
+        All.to_pickle('{}Datasets/{}.df'.format(path,relation)) 
 
 def word_cloud():    
     import matplotlib.pyplot as plt
@@ -226,7 +214,23 @@ def word_cloud():
     plt.axis("off")
     plt.show()
     print 'Done in {:.0f} minutes!'.format((time()-s)/60)
-    
+
+def convertDicofListofTuples_listofTuples(dic):
+    tuples=[]
+    for k,V in dic.items(): # dictionary of lists of tuples
+        if V:
+            for v in V:
+                tuples.append((k,)+v)
+    return tuples
+
+def convertDicofList_listofTuples(dic):
+    tuples=[]
+    for k,V in dic.items(): # dictionary of lists of tuples
+        if V:
+            for v in V:
+                tuples.append((k,v))
+    return tuples
+
 def parseMeSH(path='/home/arya/PubMed/MeSH/desc2015.xml'):
     from ParseMeSHXML import parse_mesh 
     from MEDLINEDatabase import MeSHDB
@@ -251,7 +255,6 @@ def parseMeSH(path='/home/arya/PubMed/MeSH/desc2015.xml'):
     print 'MeSH Dictionary has {} terms ({} are distinct)'.format(M.uid.shape[0], M.uid.unique().shape[0])
     M.drop('uid',axis=1,inplace=True)
     M.to_pickle('/home/arya/PubMed/GEO/Datasets/M.df')
-
     return db    
 
 

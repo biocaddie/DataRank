@@ -99,33 +99,21 @@ def parse_one(path):
         print >> sys.stderr, '{}\n{}\n***********'.format(path,traceback.format_exc())
         return None
 
-def mergeMEDLINE():
+def create_DP_dataframe():
     data_outpath=outpath.replace('GSE','Datasets')
     if not os.path.exists(data_outpath):            os.makedirs(data_outpath)
     all_gse=[x for x in pickle.load(open(outpath+'GSE.pkl','rb')) if x is not None]
     dic={}
     for item in all_gse:
         dic.update(item)
-    pd.to_pickle(dic, open(data_outpath+'DP.pkl','wb'))
-#     gse_pmid = {key: value['pmid'] for (key, value) in dic.items()}
-#     pickle.dump(gse_pmid, open(data_outpath+'gse_pmid.pkl','wb'))
-#     gse_title = {key: value['title'] for (key, value) in dic.items()}
-#     pickle.dump(gse_title, open(data_outpath+'gse_title.pkl','wb'))
-#     gse_summary = {key: value['summary'] for (key, value) in dic.items()}
-#     pickle.dump(gse_summary, open(data_outpath+'gse_summary.pkl','wb'))
-#     gse_pmid = {key: value  for (key, value) in gse_pmid.items() if value is not None}
-#     pickle.dump(gse_pmid, open(data_outpath+'gse_pmid_clean.pkl','wb'))
-#     with open(outpath.replace('GSE', 'PMID')+'gse_pmid.txt','w') as f:
-#         for pmid in gse_pmid.values():
-#             if len(pmid):
-#                 print >>f,pmid 
-#     c=np.array(count.values())
-#     print sum(c>1)
+    DP=pd.DataFrame(dic).transpose()[['accession','pmid']].dropna()
+    DP.index=range(DP.shape[0])
+    DP.to_pickle(data_outpath+'DP.df')
     
 if __name__ == '__main__':
 #     get_paths()
 #     download()
 #     parse_all()
-    mergeMEDLINE()
+    create_DP_dataframe()
     
     

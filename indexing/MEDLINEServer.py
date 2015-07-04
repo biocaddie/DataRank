@@ -21,8 +21,8 @@ def saveBatchHelper( params):
 
 class MEDLINEServer:
     @staticmethod
-    def getDateFromStr(str):
-        p=map(lambda x: int(x),str.split('/'))
+    def getDateFromStr(seq):
+        p=map(lambda x: int(x),seq.split('/'))
         return datetime.date(p[0],p[1],p[2])
     
     @staticmethod
@@ -72,9 +72,9 @@ class MEDLINEServer:
     
     @staticmethod
     def getNumRecsordsInBatch(fname):
-        records = Entrez.parseMEDLINE(open(fname))
+        records = Entrez.parse(open(fname))
         i=0
-        for record in records:
+        for _ in records:
             i+=1
         return i
     
@@ -152,26 +152,6 @@ class MEDLINEServer:
         sys.stderr = open(path+'Log/updateBatchXMLFiles.err','w')
         MEDLINEServer.updatePMIDs(path)
         MEDLINEServer.saveMEDLINE(path, num_threads)
-        
-    @staticmethod
-    def batchParamForDatabase():
-        return {'pmid':[],
-                'abstract':[],
-                'abstractLength':[],
-                'title':[],
-                'date':[],
-                'language':[],
-                'issb':[],
-                'mesh':[],
-                'journal':[],
-                'jid':[],
-                'author':[],
-                'aid':[],
-                'country':[],
-                'mid':[],
-                'DataBankList':[]
-                }
-
         
 
 if __name__ == '__main__':
