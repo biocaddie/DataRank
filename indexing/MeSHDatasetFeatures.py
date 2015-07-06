@@ -68,14 +68,23 @@ def gse_paper_stats(path='/home/arya/PubMed/GEO/Datasets/'):
 
 
 
-def create_dataset(PPM):
+def create_dataset(ppm):
     labels, feats=[],[]
-    IDX=PPM.index.unique()
-    for idx in IDX:
-        feat=PPM.loc[idx].mid.unique()
-        if len(feat):
-            feats.append({k:1 for k in feat})
-            labels.append( PPM.loc[idx].cited_pmid.unique())
+    idx=ppm.index.unique()
+#     j=0
+#     print ppm
+    for i in idx:
+#         j+=1
+# #         if not j%1000:
+#         print j
+        feat=np.append([27455],ppm.loc[i].mid.astype(int))
+        label=ppm.loc[i].cited_pmid.astype(int)
+        if  len(label.shape):
+            label=label.unique()
+        else:
+            label=np.array([label])
+        feats.append({k:1 for k in feat})
+        labels.append( label)
     return labels,feats
 
 def write_libsvm_dataset_multilabel(labels, feats,path):
@@ -83,7 +92,6 @@ def write_libsvm_dataset_multilabel(labels, feats,path):
         for label,feat in zip(labels, feats):
             if len(label):
                 line=', '.join(map(str,label)) 
-                line=str(label)
                 for k,v in sorted(feat.items(),key=lambda x: x[0]):
                     line+=' {}:{}'.format(k,v)
                 print >>f,line
@@ -104,22 +112,22 @@ def create_MeSH_LibSVM_Datasets(multilabel=False,path='/home/arya/PubMed/GEO/Dat
     PPM.index=PPM[CVTrain.index.name]
     for fold in range(CVTrain.shape[1]):
         IDX=CVTrain[fold][CVTrain[fold]].index
-        df=PPM.loc[IDX].dropna()
-        print 'creating train dataset...', df.index.unique().shape[0], 'out of', df.shape[0], sys.stdout.flush()
-        labels,feats=create_dataset(df)
+        ppm=PPM.loc[IDX].dropna()
+        print 'creating train dataset...', ppm.index.unique().shape[0], 'out of', ppm.shape[0], sys.stdout.flush()
+        labels,feats=create_dataset(ppm)
         print 'writing train dataset...', sys.stdout.flush()
-        write_libsvm_dataset_multilabel(labels, feats,'{}libsvm/train.{}.multilabel.libsvm'.format(path,fold))
+        write_libsvm_dataset_multilabel(labels, feats,'{}libsvm/train.{}.{}.libsvm'.format(path,fold,('multiclass','multilabel')[multilabel]))
         IDX=CVTrain[fold][~CVTrain[fold]].index
-        df=PPM.loc[IDX].dropna()
-        print 'creating test dataset...', df.index.unique().shape[0], 'out of', df.shape[0], sys.stdout.flush()
-        labels,feats=create_dataset(df)
+        ppm=PPM.loc[IDX].dropna()
+        print 'creating test dataset...', ppm.index.unique().shape[0], 'out of', ppm.shape[0], sys.stdout.flush()
+        labels,feats=create_dataset(ppm)
         print 'writing test dataset...', sys.stdout.flush()
-        write_libsvm_dataset_multilabel(labels, feats,'{}libsvm/test.{}.multilabel.libsvm'.format(path,fold))
+        write_libsvm_dataset_multilabel(labels, feats,'{}libsvm/test.{}.{}.libsvm'.format(path,fold,('multiclass','multilabel')[multilabel]))
          
         
     
-def clean(path='/home/arya/PubMed/GEO/Datasets/',n_fold=10, original_paper_num_citation_th=1):
-    sys.stdout=open('/home/arya/PubMed/GEO/Log/clean.log','a')
+def clean(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5, original_paper_num_citation_th=1):
+    sys.stdout=open('/home/arya/PubMed/GEO/Log/clean.log','w')
     print '**************************************************** OriginalPaperCitaionTh= ',original_paper_num_citation_th
     DP=pd.read_pickle(path+'DP.df')
     print 'DP:\n{} Dataset conneced to {} Original Papers (indexed with pmids, not DOI and title). (i.e., N->1  Relationship with max degree ({},{}))\n'.format(DP.accession.unique().shape[0], DP.pmid.unique().shape[0], max(DP.accession.value_counts()), max(DP.pmid.value_counts()) )
@@ -165,18 +173,19 @@ def split(multilabel, path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     print 'Making it boolean'
     CVTrain.to_pickle('{}CVTrain.{}.df'.format(path, ('multiclass','multilabel')[multilabel]))
     
-    
+
+        
 if __name__ == '__main__':
 #     gse_dataset_stats()
 #     gse_paper_stats()
 #     create_MeSH_features_only_original_papers()
 
-#     clean(original_paper_num_citation_th=20)
+#     clean(original_paper_num_citation_th=50)
 #     split(multilabel=False)
 #     split(multilabel=True)
-
-    create_MeSH_LibSVM_Datasets(multilabel=False)
-    create_MeSH_LibSVM_Datasets(multilabel=True)
+# 
+#     create_MeSH_LibSVM_Datasets(multilabel=False)
+#     create_MeSH_LibSVM_Datasets(multilabel=True)
     print 'Done!'    
         
     

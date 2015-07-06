@@ -8,45 +8,100 @@ import pandas as pd
 import numpy as np
 from Measure import MRR,AP
 Entrez.email="a@a.com"
-D=pd.read_pickle('/home/arya/PubMed/GEO/Datasets/D.df')
 
 
-a=['GSE63882', 'GSE69636', 'GSE69633', 'GSE66492', 'GSE62399', 'GSE50011', 'GSE67472', 'GSE52319', 'GSE45329', 'GSE55762', 'GSE65124', 'GSE44134', 'GSE44133', 'GSE42172', 'GSE42334', 'GSE42333', 'GSE52509', 'GSE62182', 'GSE56099', 'GSE51601', 'GSE55962', 'GSE56782', 'GSE50254', 'GSE55127', 'GSE55454', 'GSE44603', 'GSE49107', 'GSE35222', 'GSE50836', 'GSE51530', 'GSE28368', 'GSE43411', 'GSE49450', 'GSE42623', 'GSE42668', 'GSE42667', 'GSE45330', 'GSE47022', 'GSE45847', 'GSE43688', 'GSE42962', 'GSE42889', 'GSE40407', 'GSE41421', 'GSE34517', 'GSE37058', 'GSE38093', 'GSE18033', 'GSE39455', 'GSE33512', 'GSE37768', 'GSE38409', 'GSE34642', 'GSE30079', 'GSE36568', 'GSE36810', 'GSE26887', 'GSE27681', 'GSE36174', 'GSE28804', 'GSE33561', 'GSE34635', 'GSE28906', 'GSE30272', 'GSE13931', 'GSE31548', 'GSE31547', 'GSE31908', 'GSE30660', 'GSE30906', 'GSE30032', 'GSE20257', 'GSE19407', 'GSE27272', 'GSE27973', 'GSE24414', 'GSE27002', 'GSE19667', 'GSE23611', 'GSE21066', 'GSE21532', 'GSE20143', 'GSE20520', 'GSE17913', 'GSE18344', 'GSE19510', 'GSE19540', 'GSE18235', 'GSE18044', 'GSE12930', 'GSE12587', 'GSE12586', 'GSE12585', 'GSE17484', 'GSE13896', 'GSE14461', 'GSE14383', 'GSE14385', 'GSE11952', 'GSE15563', 'GSE13260', 'GSE13309', 'GSE8790', 'GSE14634', 'GSE10135', 'GSE7832', 'GSE12428', 'GSE10063', 'GSE12036', 'GSE8987', 'GSE11798', 'GSE10896', 'GSE10718', 'GSE10700', 'GSE7310', 'GSE7079', 'GSE7895', 'GSE7434', 'GSE6854', 'GSE4806', 'GSE4234', 'GSE4516', 'GSE4644', 'GSE3212', 'GSE2302', 'GSE2090', 'GSE1276', 'GSE994']
-t=a[7:100:5]
+def create_MeSHQuery(path='/home/arya/PubMed/GEO/Datasets/'):
+    PM=pd.read_pickle(path+'PM.df') 
+    DP=pd.read_pickle(path+'DP.df') 
+    PP=pd.read_pickle(path+'PP.df')
+    M=pd.read_pickle(path+'M.df')
+    PM=pd.merge(PM,M ,left_on=['muid'],right_on=['uid'])[['pmid','name']]
+    PM.index=PM.pmid
+    PM.drop('pmid',axis=1,inplace=True)
+    PP.index=PP.cites_pmid
+    PPM=pd.merge(PP,PM,right_index=True,left_index=True)[['name','cited_pmid']]
+    IDX=PPM.index.unique()
+    print 'creating {} queries form MeSH terms...'.format(IDX.shape[0])
+    MQ=[]
+    for i in IDX:
+        q= PPM.loc[i]
+        if not len(q.cited_pmid.shape):
+            cited_pmid=[q.cited_pmid]
+        else:
+            cited_pmid=q.cited_pmid
+        try:
+            meshq='\" OR \"'.join(q.name.values)
+        except AttributeError:
+            meshq=q['name']
+            print meshq
+        MQ.append((', '.join(DP[DP.pmid.isin(cited_pmid)].accession.unique()), meshq))
+    pd.DataFrame(MQ).to_pickle(path+'MeSH.Query.df')        
+            
+
+def create_TitleAbstractQuery(path='/home/arya/PubMed/GEO/Datasets/'):
+    P=pd.read_pickle(path+'P.df')[['pmid','title','abstract']]
+    P.index=P.pmid 
+    DP=pd.read_pickle(path+'DP.df') 
+    PP=pd.read_pickle(path+'PP.df')
+    PP.index=PP.cites_pmid
+    PPP=pd.merge(PP,P,right_index=True,left_index=True)
+    IDX=PPP.index.unique()
+    print 'creating {} queries form MeSH terms...'.format(IDX.shape[0])
+#     with open(path+'Title.queries','w') as ft, open(path+'Abstract.queries','w') as fa:
+    TQ=[]
+    AQ=[]
+    for i in IDX:
+        q= PPP.loc[i]
+        if len(q.shape)==2:
+            cited_pmid=q.cited_pmid
+            tq=q['title'].iloc[0]
+            aq=q['abstract'].iloc[0]
+        else:
+            cited_pmid=[q.cited_pmid]
+            tq=q['title']
+            aq=q['abstract']
+        
+        targets=', '.join(DP[DP.pmid.isin(cited_pmid)].accession.unique())
+        TQ.append((targets,tq))
+        AQ.append((targets,aq))
+    pd.DataFrame(AQ).to_pickle(path+'Abstract.Query.df')
+    pd.DataFrame(TQ).to_pickle(path+'Title.Query.df')
+
 def query_geo(query):
-    query = "({})AND \"gse\"[Filter]".format(query)
-    print query 
+    query = u"({})AND \"gse\"[Filter]".format(query)
     handle = Entrez.esearch(db='gds',term=query,retmax=1000)
     records = Entrez.read(handle)
     handle.close()
     records = records['IdList']
     handle = Entrez.efetch(db='gds',id=records, retmode="xml")
     dname= np.array([i.split()[2] for i in handle if i[:6]=='Series'])
-    did= (D.loc[dname].did).fillna(-1).values.astype(int)
-    return did,dname
+    return dname
 
-def create_GEO_Queries(path='/home/arya/PubMed/GEO/Datasets/'):
-    PP=pd.read_pickle(path+'PP.df')[['cites_pmid','cited_pmid']]
-    PP.index=PP.cites_pmid
-    PP.drop('cites_pmid',axis=1,inplace=True)
-    PM=pd.read_pickle(path+'PMeSH.df')
-    PM.index=PM.pmid
-    PM.drop(['pmid','mid'],axis=1, inplace=True)
-    PMID=PP.index.unique()
-    M=pd.read_pickle(path+'MeSH.df').name
-    for pmid in PMID:
-        muid=PM[pmid]
-        names=M.loc[muid]
-        break
         
 if __name__ == '__main__':
-#     query="A systems biology approach"
-#     result,dname= query_geo(query)
-#     result=dname
-#     tar=['GSE56782']
-#     print AP(result,tar)
-#     print MRR(result,tar)
+    path='/home/arya/PubMed/GEO/Datasets/'
+    
+    run='Title.Query.df'
+#     run='Abstract.Query.df'
+#     run='MeSH.Query.df'
+    print run
+    df=pd.read_pickle(path+run)
+    y=map(lambda x: x.split(','),df[0])
+    q=df[1]
+    n=0
+    results=[]
+    for i in range(20000):
+#         print i, y[i], q[i]
+        try:
+            result= query_geo(q[i].replace(' ', ' OR '))
+            results.append((AP(result,y[i]),MRR(result,y[i])))
+        except:
+            pass
+    print results
+    df=pd.DataFrame(results,columns=('AP','MRR')).to_pickle(path+run+'.results.df')
 #     print  len(result)
 #     create_GEO_Queries()
+#     create_TitleAbstractQuery()
+#     create_MeSHQuery()
     print 'Done'
 

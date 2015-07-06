@@ -14,6 +14,9 @@ import pandas as pd
 
 from sklearn.preprocessing import  MultiLabelBinarizer 
 
+
+            
+
 def compute_ranking(nr_folds=5,multilabel=False):
     path='/home/arya/PubMed/GEO/Datasets/'
     outpath='{}libsvm/out/'.format(path)
@@ -24,15 +27,15 @@ def compute_ranking(nr_folds=5,multilabel=False):
     if not os.path.exists(outpath):            os.makedirs(outpath)
     for fold in range(nr_folds):
         import warnings
-        dspath='{}libsvm/train.{}{}.libsvm'.format(path,fold, ('','.multilabel')[multilabel])
+        dspath='{}libsvm/train.{}.{}.libsvm'.format(path,fold, ('multiclass','multilabel')[multilabel])
         start=time()
         warnings.filterwarnings('ignore')
         X, y = load_svmlight_file(dspath,multilabel=multilabel)
         runname='.{}{}'.format(fold,('','.multilabel')[multilabel])
-        print 'learning...', sys.stdout.flush()
+        print 'learning...',('multiclass','multilabel')[multilabel],X.shape,  sys.stdout.flush()
         model=OneVsRestClassifier(LinearSVC(random_state=0)).fit(X, y)
-        X, y = load_svmlight_file(dspath.replace('train','test'),multilabel=True)
-        print 'predicting...', sys.stdout.flush()
+        X, y = load_svmlight_file(dspath.replace('train','test'),multilabel=multilabel)
+        print 'predicting...',('multiclass','multilabel')[multilabel],X.shape, sys.stdout.flush()
         deci=model.decision_function(X)
         labels=model.classes_
         ranking= pd.DataFrame(columns=labels,data=labels[deci.argsort()[:,::-1]])
@@ -47,10 +50,11 @@ def compute_ranking(nr_folds=5,multilabel=False):
         ranking.to_pickle('{}ranking{}.df'.format(outpath,runname))
         deci.to_pickle('{}deci{}.df'.format(outpath,runname))
         print 'Done in {:.0f} minutes'.format((time()-start)/60.0)
+        break
     sys.stderr=stderr_old
     sys.stdout=stdout_old
 
 if __name__ == '__main__':
+    compute_ranking(multilabel=False)
 #     compute_ranking(multilabel=True)
-    compute_ranking()
     print 'Done'
