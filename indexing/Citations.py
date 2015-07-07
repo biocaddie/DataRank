@@ -5,6 +5,7 @@ import multiprocessing
 import re
 import mechanize
 import urllib2
+import pandas as pd
 from bs4 import BeautifulSoup
 import MEDLINEServer
 path='/home/arya/PubMed/GEO/'   
@@ -155,7 +156,7 @@ def citations_for_pmid_helper(param):
         pass
 
 def save_citations(num_threads=20):
-    fileout=path+'Datasets/{}.pkl'.format('citations')
+    fileout=path+'Datasets/citations.pkl'
     try:
         pmid_processed_sofar= map(str.strip,open(fileout.replace('.pkl','.log')).readlines())
     except:
@@ -167,8 +168,9 @@ def save_citations(num_threads=20):
     params=[{'pmid':pmid, 'doi':PDOI[pmid],'title':PT[pmid]} for pmid in pmidList if pmid not in pmid_processed_sofar]
     print '\nTotal PMID: {}\nProcessed So far: {}\nRemaining: {}\nNum_Threads: {}'.format(len(pmidList), len(pmid_processed_sofar), len(params), num_threads)
     old_stdout = sys.stdout
-    sys.stdout = open(fileout.replace('.pkl','.log'),'a')
-    sys.stderr = open(fileout.replace('.pkl','.err'),'w')
+    if not os.path.exists(path+'Log'):            os.makedirs(path+'Log')
+    sys.stdout = open(path+'Log/citations.pkl','a')
+    sys.stderr = open(path+'Log/citations.pkl','w')
     if num_threads==1:
         for p in params:    citations_for_pmid_helper(p)
     else:
@@ -180,18 +182,25 @@ def getLen(item):
         return len(item)
     return 0
 
+
+    
 def merge_saved_pickle_files():
+    from QuickParser import convertDicofListofTuples_listofTuples
     files = [ citations_path+f for f in os.listdir(citations_path) if os.path.isfile(os.path.join(citations_path,f)) ]
     results={}
     for f in files:
         results.update(pickle.load(open(f,'rb')))
-    fileout=path+'Datasets/{}.pkl'.format('citations')
-    pickle.dump(results, open(fileout,'wb'))
-    print 'Merging {} citation files is done at {}!'.format(len(files),fileout)
+    fileout=path+'Datasets/PP.df'
+    PP=pd.DataFrame(convertDicofListofTuples_listofTuples(results),columns=('cited_pmid','cites_doi','cites_pmid','cites_title', 'cites_num_citaion'))
+    PP.drop_duplicates(inplace=True)
+    PP.drop(['cites_doi','cites_title','cites_num_citaion'], axis=1, inplace=True)
+    PP.dropna(inplace=True)
+    PP.to_pickle(fileout)
+    print 'Merging {} citation files is done at {}'.format(len(files),fileout)
 
 if __name__ == '__main__':
-    save_citations(num_threads=15)
-#     merge_saved_pickle_files()
-    
+#     save_citations(num_threads=15)
+    merge_saved_pickle_files()
+    print 'Done'
         
 

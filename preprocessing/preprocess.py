@@ -13,7 +13,7 @@ import Stemmer #PyStemmer
 english_stemmer = Stemmer.Stemmer('en')
 db_conn=0
 min_doc_length=5
-def parse(abs):
+def parseMEDLINE(abs):
     """
     Extracts abstract and ignores the tags extra white spaces within abstracts.
     """
@@ -204,7 +204,7 @@ def parse_options(options):
     if type(options) == str:
         options = options.split()
     i = 0
-    param={'src':'/home/public/hctest.db','pipeline':'parse-clean', 'compute_tfidf':False, 'delete_tables':1, 'resume':False, 'R':'parse-clean', 'batchsize':5000, 'thtfidf':0, 'thtf':0, 'do_stemming':0}
+    param={'src':'/home/public/hctest.db','pipeline':'parseMEDLINE-clean', 'compute_tfidf':False, 'delete_tables':1, 'resume':False, 'R':'parseMEDLINE-clean', 'batchsize':5000, 'thtfidf':0, 'thtf':0, 'do_stemming':0}
     while i < len(options):
         if options[i] == '-src':
             i = i + 1
@@ -392,7 +392,7 @@ options :
 -dst {destination database path} (default /home/public/abstracts.db)
 -D {0,1}: deletes tables if they exit (default 1)
 -r {0,1} : resume from the last record inserted (default 0) 
--p {parse, parse-clean, reduce} process pipeline (default parse-clean) 
+-p {parseMEDLINE, parseMEDLINE-clean, reduce} process pipeline (default parseMEDLINE-clean) 
 -R {runname}  (default process pipeline)
 -thtfidf {threshold for tfidf} (default 0)
 -thtf {threshold for tfidf} (default 20)
@@ -413,8 +413,8 @@ def parse_database(param):
         if record is None:
             break
         ID,abs = record[0], record[1]
-        if 'parse' in param['pipeline']:
-            ID,abs = record[0], parse(abs)
+        if 'parseMEDLINE' in param['pipeline']:
+            ID,abs = record[0], parseMEDLINE(abs)
 #         if 'clean' in param['pipeline']:
 #             ID,abs = record[0], clean(abs)
         dic, DT= insertToDic(dic, abs)
@@ -449,7 +449,7 @@ if __name__ == '__main__':
                 corpus=db_conn.getAll()
                 corpus= map(lambda x: x[0], corpus)
                 clean(corpus,param)
-            elif param['pipeline']=='parse':
+            elif param['pipeline']=='parseMEDLINE':
                 parse_database(param)
                 
     except (IOError,ValueError) as e:
