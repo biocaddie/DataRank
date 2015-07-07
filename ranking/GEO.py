@@ -81,24 +81,24 @@ def query_geo(query):
 if __name__ == '__main__':
     path='/home/arya/PubMed/GEO/Datasets/'
     
-    run='Title.Query.df'
-#     run='Abstract.Query.df'
+    run='Abstract.Query.df'
+#     run='Title.Query.df'
 #     run='MeSH.Query.df'
-    print run
+    
     df=pd.read_pickle(path+run)
     y=map(lambda x: x.split(','),df[0])
     q=df[1]
     n=0
     results=[]
-    for i in range(20000):
+    print run, len(q)
+    for i in range(len(q)):
 #         print i, y[i], q[i]
         try:
             result= query_geo(q[i].replace(' ', ' OR '))
-            results.append((AP(result,y[i]),MRR(result,y[i])))
+            results.append((','.join(y[i]), ','.join(result)))
         except:
             pass
-    print results
-    df=pd.DataFrame(results,columns=('AP','MRR')).to_pickle(path+run+'.results.df')
+    df=pd.DataFrame(results,columns=('target','results')).to_pickle(path+run.replace('.Query.df','.results.df'))
 #     print  len(result)
 #     create_GEO_Queries()
 #     create_TitleAbstractQuery()

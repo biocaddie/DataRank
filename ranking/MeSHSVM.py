@@ -11,6 +11,7 @@ from sklearn.datasets import load_svmlight_file
 import numpy as np
 from time import time
 import pandas as pd
+import scipy.sparse as sps
 
 from sklearn.preprocessing import  MultiLabelBinarizer 
 
@@ -35,6 +36,7 @@ def compute_ranking(nr_folds=5,multilabel=False):
         print 'learning...',('multiclass','multilabel')[multilabel],X.shape,  sys.stdout.flush()
         model=OneVsRestClassifier(LinearSVC(random_state=0)).fit(X, y)
         X, y = load_svmlight_file(dspath.replace('train','test'),multilabel=multilabel)
+        X=sps.csr_matrix((X.data, X.indices, X.indptr), shape=(X.shape[0], 27456))
         print 'predicting...',('multiclass','multilabel')[multilabel],X.shape, sys.stdout.flush()
         deci=model.decision_function(X)
         labels=model.classes_
@@ -50,7 +52,6 @@ def compute_ranking(nr_folds=5,multilabel=False):
         ranking.to_pickle('{}ranking{}.df'.format(outpath,runname))
         deci.to_pickle('{}deci{}.df'.format(outpath,runname))
         print 'Done in {:.0f} minutes'.format((time()-start)/60.0)
-        break
     sys.stderr=stderr_old
     sys.stdout=stdout_old
 

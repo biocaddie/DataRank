@@ -71,12 +71,7 @@ def gse_paper_stats(path='/home/arya/PubMed/GEO/Datasets/'):
 def create_dataset(ppm):
     labels, feats=[],[]
     idx=ppm.index.unique()
-#     j=0
-#     print ppm
     for i in idx:
-#         j+=1
-# #         if not j%1000:
-#         print j
         feat=np.append([27455],ppm.loc[i].mid.astype(int))
         label=ppm.loc[i].cited_pmid.astype(int)
         if  len(label.shape):
@@ -185,7 +180,7 @@ if __name__ == '__main__':
 #     split(multilabel=True)
 # 
 #     create_MeSH_LibSVM_Datasets(multilabel=False)
-#     create_MeSH_LibSVM_Datasets(multilabel=True)
+    create_MeSH_LibSVM_Datasets(multilabel=True)
     print 'Done!'    
         
     
