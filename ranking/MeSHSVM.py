@@ -15,7 +15,11 @@ import scipy.sparse as sps
 
 from sklearn.preprocessing import  MultiLabelBinarizer 
 
-
+def correct_dataset(path):
+    lines=open(path).readlines()
+    with open(path,'w') as f:
+        for line in lines:
+            print >> f,line.replace(', ', ',').strip()
             
 
 def compute_ranking(nr_folds=5,multilabel=False):
@@ -23,14 +27,15 @@ def compute_ranking(nr_folds=5,multilabel=False):
     outpath='{}libsvm/out/'.format(path)
     stdout_old=sys.stdout
     stderr_old=sys.stderr
-    sys.stdout=open('{}MeSH{}.log'.format('/home/arya/PubMed/GEO/Log/',('.multiclass','.multilabel')[multilabel]),'w')
-    sys.stderr=open('{}MeSH{}.err'.format('/home/arya/PubMed/GEO/Log/',('.multiclass','.multilabel')[multilabel]),'w')
+#     sys.stdout=open('{}MeSH{}.log'.format('/home/arya/PubMed/GEO/Log/',('.multiclass','.multilabel')[multilabel]),'w')
+#     sys.stderr=open('{}MeSH{}.err'.format('/home/arya/PubMed/GEO/Log/',('.multiclass','.multilabel')[multilabel]),'w')
     if not os.path.exists(outpath):            os.makedirs(outpath)
     for fold in range(nr_folds):
         import warnings
         dspath='{}libsvm/train.{}.{}.libsvm'.format(path,fold, ('multiclass','multilabel')[multilabel])
         start=time()
         warnings.filterwarnings('ignore')
+        correct_dataset(dspath)
         X, y = load_svmlight_file(dspath,multilabel=multilabel)
         runname='.{}{}'.format(fold,('','.multilabel')[multilabel])
         print 'learning...',('multiclass','multilabel')[multilabel],X.shape,  sys.stdout.flush()
