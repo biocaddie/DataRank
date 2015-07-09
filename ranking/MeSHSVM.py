@@ -56,6 +56,6 @@ def compute_ranking(nr_folds=5,multilabel=False):
     sys.stdout=stdout_old
 
 if __name__ == '__main__':
-    compute_ranking(multilabel=False)
-#     compute_ranking(multilabel=True)
+#     compute_ranking(multilabel=False)
+    compute_ranking(multilabel=True)
     print 'Done'

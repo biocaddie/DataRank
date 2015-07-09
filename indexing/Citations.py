@@ -190,13 +190,13 @@ def merge_saved_pickle_files():
     results={}
     for f in files:
         results.update(pickle.load(open(f,'rb')))
-    fileout=path+'Datasets/PP.df'
     PP=pd.DataFrame(convertDicofListofTuples_listofTuples(results),columns=('cited_pmid','cites_doi','cites_pmid','cites_title', 'cites_num_citaion'))
     PP.drop_duplicates(inplace=True)
+    PP.to_pickle(path+'Datasets/Citations.df')
     PP.drop(['cites_doi','cites_title','cites_num_citaion'], axis=1, inplace=True)
     PP.dropna(inplace=True)
-    PP.to_pickle(fileout)
-    print 'Merging {} citation files is done at {}'.format(len(files),fileout)
+    PP.to_pickle(path+'Datasets/PP.All.df')
+    print 'Merging {} citation files is done at {}'.format(len(files),path)
 
 if __name__ == '__main__':
 #     save_citations(num_threads=15)

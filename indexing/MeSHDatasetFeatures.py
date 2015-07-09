@@ -124,9 +124,9 @@ def create_MeSH_LibSVM_Datasets(multilabel=False,path='/home/arya/PubMed/GEO/Dat
 def clean(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5, original_paper_num_citation_th=1):
     sys.stdout=open('/home/arya/PubMed/GEO/Log/clean.log','w')
     print '**************************************************** OriginalPaperCitaionTh= ',original_paper_num_citation_th
-    DP=pd.read_pickle(path+'DP.df')
+    DP=pd.read_pickle(path+'DP.All.df')
     print 'DP:\n{} Dataset conneced to {} Original Papers (indexed with pmids, not DOI and title). (i.e., N->1  Relationship with max degree ({},{}))\n'.format(DP.accession.unique().shape[0], DP.pmid.unique().shape[0], max(DP.accession.value_counts()), max(DP.pmid.value_counts()) )
-    PP=pd.read_pickle(path+'PP.df')
+    PP=pd.read_pickle(path+'PP.All.df')
     PP=PP[PP.cited_pmid.isin(DP.pmid.unique())]
     print 'PP:\nAfter Removing Duplicates and Extra Columns and those cited_pmids (original papers) that are not in DP,\nI ended up with {} rows,  {} Unique Original Papers(num_classes) and {} Unique Citations (num_samples in  multilabel classification)).\n'.format(PP.cited_pmid.shape[0], PP.cited_pmid.unique().shape[0], PP.cites_pmid.unique().shape[0])
     keep=PP.cited_pmid.value_counts()>=original_paper_num_citation_th
@@ -168,8 +168,34 @@ def split(multilabel, path='/home/arya/PubMed/GEO/Datasets/', n_fold=5):
     print 'Making it boolean'
     CVTrain.to_pickle('{}CVTrain.{}.df'.format(path, ('multiclass','multilabel')[multilabel]))
     
-
+def compute_imporance_ranking():
+    path='/home/arya/PubMed/GEO/Datasets/'
+    C=pd.read_pickle(path+'Citations.df')
+    C.fillna('0',inplace=True)
+    C.cites_num_citaion = map(lambda x: int(x.replace(',','')), C.cites_num_citaion)
+    DP=pd.read_pickle(path+'DP.df')
+    DPP=pd.read_pickle(path+'DPP.df')
+    DP=DP[DP.accession.isin(DPP.accession.unique())]
+    DPPC=pd.merge(DP,C, left_on=['pmid'] ,right_on=[ 'cited_pmid'])
+    top5=DPPC.accession.value_counts()[:5]
+    print 'Top 5 datasets based on number of citations that their origianl citation got'
+    print '{:12}{:10}{:8}{:8}'.format('Accession', 'PMID', '#OCited', '# Cited by cites papers')
+    for a,c in zip(top5.index, top5.values):
+        pmid = DP[DP.accession==a].iloc[0].pmid
+        print '{:12}{:10}{:8}{:8}'.format(a, pmid ,c, sum(C[C.cited_pmid == pmid].cites_num_citaion.values) )
+    
+    print '{:12}{:10}{:8}{:8}'.format('Accession', 'PMID', '#OCited', '# Cited by cites papers')
+    
+    print 'Top 5 datasets based on number of citations that all the relevant paper got'
+    top5=DPPC[['accession','cites_num_citaion']].groupby(['accession']).agg('sum').sort('cites_num_citaion', ascending=False).iloc[:5]
+    top5op=DPPC.accession.value_counts().loc[top5.index].values
+    for a,opc,c in zip(top5.index,top5op, top5.values):
+        pmid = DP[DP.accession==a].iloc[0].pmid
+        print '{:12}{:10}{:8}{:8}'.format(a, pmid ,opc, c[0] )
         
+    
+    
+    
 if __name__ == '__main__':
 #     gse_dataset_stats()
 #     gse_paper_stats()
@@ -180,7 +206,8 @@ if __name__ == '__main__':
 #     split(multilabel=True)
 # 
 #     create_MeSH_LibSVM_Datasets(multilabel=False)
-    create_MeSH_LibSVM_Datasets(multilabel=True)
+#     create_MeSH_LibSVM_Datasets(multilabel=True)
+    compute_imporance_ranking()
     print 'Done!'    
         
     
