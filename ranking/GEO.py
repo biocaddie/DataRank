@@ -6,6 +6,7 @@ Created on Jun 29, 2015
 from Bio import Entrez
 import pandas as pd
 import numpy as np
+import sys
 from Measure import MRR,AP
 Entrez.email="a@a.com"
 
@@ -77,31 +78,38 @@ def query_geo(query):
     dname= np.array([i.split()[2] for i in handle if i[:6]=='Series'])
     return dname
 
-        
-if __name__ == '__main__':
-    path='/home/arya/PubMed/GEO/Datasets/'
-    
-    run='Abstract.Query.df'
-#     run='Title.Query.df'
-#     run='MeSH.Query.df'
+def run_queries_GEO(run):
+    sys.stdout=open(path.replace('Datasets', 'Log')+run.replace('.df','.log'),'w')
+    sys.stderr=open(path.replace('Datasets', 'Log')+run.replace('.df','.err'),'w')
     
     df=pd.read_pickle(path+run)
     y=map(lambda x: x.split(','),df[0])
     q=df[1]
-    n=0
     results=[]
     print run, len(q)
     for i in range(len(q)):
-#         print i, y[i], q[i]
         try:
             result= query_geo(q[i].replace(' ', ' OR '))
             results.append((','.join(y[i]), ','.join(result)))
+            print i,sys.stdout.flush()
         except:
             pass
+    print 'writing results' ,sys.stdout.flush()
     df=pd.DataFrame(results,columns=('target','results')).to_pickle(path+run.replace('.Query.df','.results.df'))
-#     print  len(result)
+    print 'Done'
+def run_queries_parallel():
+    runs=['Abstract.Query.df','Title.Query.df','MeSH.Query.df']
+    import multiprocessing
+    pool=multiprocessing.Pool(len(runs))
+    pool.map(run_queries_GEO,runs)
+
+if __name__ == '__main__':
+    path='/home/arya/PubMed/GEO/Datasets/'
+        
 #     create_GEO_Queries()
 #     create_TitleAbstractQuery()
 #     create_MeSHQuery()
-    print 'Done'
+    run_queries_parallel()
+
+    
 
