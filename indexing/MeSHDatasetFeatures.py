@@ -3,12 +3,10 @@ Created on Jun 24, 2015
 
 @author: arya
 '''
-import collections
 import pandas as pd
 import numpy as np
 import sys,pickle,os
 import pylab as plt
-import collections
 def clean_dic(dic):
     dic2={key: value  for (key, value) in dic.items() if value is not None and key is not None}
     return {key: value  for (key, value) in dic2.items() if len(value)}
@@ -120,7 +118,26 @@ def create_MeSH_LibSVM_Datasets(multilabel=False,path='/home/arya/PubMed/GEO/Dat
         write_libsvm_dataset_multilabel(labels, feats,'{}libsvm/test.{}.{}.libsvm'.format(path,fold,('multiclass','multilabel')[multilabel]))
          
         
-    
+def creat_dataset_for_datarankWeb():
+    path='/home/arya/PubMed/GEO/Datasets/'
+    dpp=pd.read_pickle(path+'DPP.df')
+    dp=dpp[['accession','pmid']].drop_duplicates()
+    d=pd.read_pickle(path+'D.df').loc[dp.accession]
+    pm=pd.read_pickle(path+'PM.df')
+    count=pd.read_pickle(path+'importance.df')
+    m=pd.read_pickle(path+'M.df')
+    pm.index=pm.pmid
+    pm=pm.loc[d.pmid]
+    pm=pd.merge(pm,m,left_on='muid',right_on='uid')[['pmid','name']]
+    pmg=pm.groupby('pmid')
+    uniquep=pm.pmid.unique()
+    pm=pd.DataFrame( map(lambda p: (p, pmg.get_group(p).name.unique().tolist())  , uniquep), columns=['pmid','mesh']) 
+    d=pd.merge(d,pm,on='pmid')
+    d=pd.merge(d, count, left_on='accession',right_index=True)
+    print d
+    d.to_pickle(path+'datasets.df')
+   
+   
 def clean(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5, original_paper_num_citation_th=1):
     sys.stdout=open('/home/arya/PubMed/GEO/Log/clean.log','w')
     print '**************************************************** OriginalPaperCitaionTh= ',original_paper_num_citation_th
@@ -172,7 +189,7 @@ def compute_imporance_ranking():
     path='/home/arya/PubMed/GEO/Datasets/'
     C=pd.read_pickle(path+'Citations.df')
     C.fillna('0',inplace=True)
-    C.cites_num_citaion = map(lambda x: int(x.replace(',','')), C.cites_num_citaion)
+    C.cc = map(lambda x: int(x.replace(',','')), C.cc)
     DP=pd.read_pickle(path+'DP.df')
     DPP=pd.read_pickle(path+'DPP.df')
     DP=DP[DP.accession.isin(DPP.accession.unique())]
@@ -182,16 +199,18 @@ def compute_imporance_ranking():
     print '{:12}{:10}{:8}{:8}'.format('Accession', 'PMID', '#OCited', '# Cited by cites papers')
     for a,c in zip(top5.index, top5.values):
         pmid = DP[DP.accession==a].iloc[0].pmid
-        print '{:12}{:10}{:8}{:8}'.format(a, pmid ,c, sum(C[C.cited_pmid == pmid].cites_num_citaion.values) )
+        print '{:12}{:10}{:8}{:8}'.format(a, pmid ,c, sum(C[C.cited_pmid == pmid].cc.values) )
     
     print '{:12}{:10}{:8}{:8}'.format('Accession', 'PMID', '#OCited', '# Cited by cites papers')
     
     print 'Top 5 datasets based on number of citations that all the relevant paper got'
-    top5=DPPC[['accession','cites_num_citaion']].groupby(['accession']).agg('sum').sort('cites_num_citaion', ascending=False).iloc[:5]
+    importance=DPPC[['accession','cc']].groupby(['accession']).agg('sum').sort('cc', ascending=False)
+    top5=importance.iloc[:5]
     top5op=DPPC.accession.value_counts().loc[top5.index].values
     for a,opc,c in zip(top5.index,top5op, top5.values):
         pmid = DP[DP.accession==a].iloc[0].pmid
         print '{:12}{:10}{:8}{:8}'.format(a, pmid ,opc, c[0] )
+    importance.to_pickle(path+'importance.df')
         
     
     
@@ -207,7 +226,8 @@ if __name__ == '__main__':
 # 
 #     create_MeSH_LibSVM_Datasets(multilabel=False)
 #     create_MeSH_LibSVM_Datasets(multilabel=True)
-    compute_imporance_ranking()
+#     compute_imporance_ranking()
+    creat_dataset_for_datarankWeb()
     print 'Done!'    
         
     
