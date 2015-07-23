@@ -203,16 +203,6 @@ def  mergeMEDLINE(path):
             exit()
         pd.DataFrame(All,columns=columns[relation]).to_pickle('{}Datasets/{}.df'.format(path,relation)) 
 
-def word_cloud():    
-    import matplotlib.pyplot as plt
-    from wordcloud import WordCloud
-    text = """The wordcloud library is MIT licenced, but contains DroidSansMono.ttf, a true type font by Google, that is apache licensed. The font is by no means integral, and any other font can be used by setting the font_path variable when creating a WordCloud object.
-    """
-    wordcloud = WordCloud(background_color="white",max_words=20).generate(text)
-    plt.imshow(wordcloud)
-    plt.axis("off")
-    plt.show()
-    print 'Done in {:.0f} minutes!'.format((time()-s)/60)
 
 def convertDicofListofTuples_listofTuples(dic):
     tuples=[]
@@ -249,7 +239,7 @@ def parseMeSH(path='/home/arya/PubMed/MeSH/desc2015.xml'):
     pickle.dump(M,open(path.replace('desc2015.xml','mesh.pkl'),'wb'))
     M=pickle.load(open('/home/arya/PubMed/MeSH/mesh.pkl'))
     M=pd.DataFrame(M)
-    M['mid']=M.index
+    M['mid']=M.index+1
     print 'MeSH Dictionary has {} terms ({} are distinct)'.format(M.uid.shape[0], M.uid.unique().shape[0])
     M.to_pickle('/home/arya/PubMed/GEO/Datasets/M.df')
     return db    

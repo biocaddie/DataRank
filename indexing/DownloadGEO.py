@@ -107,7 +107,7 @@ def create_DP_dataframe():
     for item in all_gse:
         dic.update(item)
     DP=pd.DataFrame(dic).transpose()
-    DP.to_pickle(data_outpath+'D.df')
+    DP.to_pickle(data_outpath+'D.All.df')
     DP=DP[['title','accession','pmid']].dropna()
     DP.drop_duplicates(inplace=True)
     DP.index=range(DP.shape[0])

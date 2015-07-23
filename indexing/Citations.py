@@ -192,10 +192,11 @@ def merge_saved_pickle_files():
         results.update(pickle.load(open(f,'rb')))
     PP=pd.DataFrame(convertDicofListofTuples_listofTuples(results),columns=('cited_pmid','cites_doi','cites_pmid','cites_title', 'cc'))
     PP.drop_duplicates(inplace=True)
+    PP.cc.fillna('0',inplace=True)
+    PP.cc = map(lambda x: int(x.replace(',','')), PP.cc)
     PP.to_pickle(path+'Datasets/Citations.df')
     PP.drop(['cites_doi','cites_title'], axis=1, inplace=True)
     PP.dropna(inplace=True)
-    PP.cc=PP.cc.values.astype(int)
     PP.to_pickle(path+'Datasets/PP.All.df')
     print 'Merging {} citation files is done at {}'.format(len(files),path)
 

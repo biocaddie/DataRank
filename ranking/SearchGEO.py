@@ -9,30 +9,6 @@ import numpy as np
 import sys
 Entrez.email="a@a.com"
 
-def createQueryCorpus(path='/home/arya/PubMed/GEO/Datasets/'):
-    M=pd.read_pickle(path+'M.df')
-    DPP=pd.read_pickle(path+'DPP.df')
-    PM=pd.read_pickle(path+'PM.df')
-    PM.index=PM.pmid
-    PM=PM.loc[DPP.cites_pmid.unique()].dropna()
-    PM
-    PM=pd.merge(PM,M ,left_on=['muid'],right_on=['uid'])
-    PM
-    DPM=pd.merge(DPP,PM ,left_on=['cites_pmid'],right_on=['pmid'])
-    DPM
-    DPMg=DPM.groupby('cites_pmid')
-    uniquep=DPM.cites_pmid.unique()
-    Q=[]
-    for p in uniquep:
-        g=DPMg.get_group(p)
-        Q+=[(g.accession.unique().tolist(), g.name.unique().tolist(), g.cited_pmid.unique().tolist(), g.cites_pmid.unique()[0])]
-    Q=pd.DataFrame( Q, columns=['accession','mesh','cited_pmid','cites_pmid']) 
-#     P=pd.read_pickle(path+'P.df')[['pmid','title','abstract']]
-#     Q=pd.merge(Q,P, left_on='cites_pmid',right_on='pmid')
-    Q.summary="This is set of queries to be used for the experiments."
-    Q.to_pickle(path+'Query.df')        
- #     meshq=           
-
 
 def queryGEO(row):
     try:
@@ -61,11 +37,10 @@ def runQueriesGEO(path='/home/arya/PubMed/GEO/Datasets/'):
     results=[]
     for _,row in Q.iterrows():
         results.append( queryGEO(row))
-    pd.DataFrame(results,columns=['accession','pmid','result']).to_pickle(path+'Query.MeSH.GEO.Results.df')
+    pd.DataFrame(results,columns=['accession','pmid','result']).to_pickle(path+'Query.GEO.Results.df')
     
 
 if __name__ == '__main__':
-#     createQueryCorpus()    
     runQueriesGEO()
     print  'Done'
 
