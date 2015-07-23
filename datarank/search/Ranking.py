@@ -45,7 +45,7 @@ def normMultiply(jaccs, counts, datasets):
 def generalRanking(keywords):
     print >>sys.stderr, "keywords: "+str(keywords)
 
-    datasets = Dataset.objects.all()
+    datasets = Dataset.objects.all()[:100]
     if not len(datasets):
         from search.source.saveData import saveAll
         print >>sys.stderr, "Saving Datasets to Django Database... "

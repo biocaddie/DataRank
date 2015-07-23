@@ -7,11 +7,11 @@ def save(row):
     d.Summary= row.summary
     d.Title= row.accession+': '+row.title
     d.Features = ';'.join(row.mesh)
-    d.Count = row.cc
+    d.Count = row.cpcc
     d.save()
 
 def saveAll():
     import pandas as pd
-    d=pd.read_pickle('/home/arya/datasets.df')
+    d=pd.read_pickle('/home/arya/PubMed/GEO/Datasets/D.Web.df')
     d.apply(save,axis=1)
 

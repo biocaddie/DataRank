@@ -41,62 +41,55 @@
 </style>
 
 <body onload="javascript: essential()">
+<br>
     <div id="layout" class="pure-g">
-    <div class="sidebar pure-u-1 pure-u-md-1-4">
-    <div class="header">
+    
+    <div class=" sidebar pure-u-1 pure-u-md-1-8" >
+<!-- <!--     <div class="header"> --> 
+<!-- 		<br> -->
+<br><br>
+        <h2 > &nbsp DataRank</h2>
 
-        <h1 class="brand-title">DB Engine</h1>
-        <h2 class="brand-tagline">Find most suitable datasets for you</h2>
-        </br>
+<!-- <!--         <style>.input-extra {                width : 15em;            } --> 
+<!-- <!--         </style> --> 
+        
+<!-- <!--     </div> --> 
+    </div>
 
-        <style>
-            .input-extra {
-                width : 15em;
-            }
-        </style>
-        <form id="searchbar" name="searchbar" class="pure-form" action="/search/" method="post">
-            {% csrf_token %}
-            {% if keyword %}
-                <input id="search_words" type="text" name="search_words" Placeholder="find sth new?">
-            {% else %}
-                <input id="search_words" type="text" name="search_words" Placeholder="features...">
-            {% endif %}
-        </form>
+    <div class=" content pure-u-1 pure-u-md-7-8" >
+    <div align='left'>
+        
+        
 
         {% block search %}
         {% endblock %}
+    
+<!--         <form type="hidden" id="login_form" method="post" action="/login/"> -->
+<!--             {% csrf_token %} -->
+<!--             <input type="hidden" id="login_name" name="username" value="" Placeholder="username"/> -->
+<!--             <input type="hidden" id="login_passw" name="password" value="" Placeholder="password" /> -->
+<!--         </form> -->
+<!--         <form type="hidden" id="user_form" method="post" action="/register/" enctype="multipart/form-data"> -->
+<!--             {% csrf_token %} -->
+<!--             <input type="hidden" id="reg_name" name="username" value=""/> -->
+<!--             <input type="hidden" id="reg_passw" name="password" value="" /> -->
+<!--             <input type="hidden" id="reg_email" name="email" value="" /> -->
+<!--         </form> -->
 
-    </div>
-    </div>
-
-    <div class="content pure-u-1 pure-u-md-3-4">
-    <div align='right'>
-        <form type="hidden" id="login_form" method="post" action="/login/">
-            {% csrf_token %}
-            <input type="hidden" id="login_name" name="username" value="" Placeholder="username"/>
-            <input type="hidden" id="login_passw" name="password" value="" Placeholder="password" />
-        </form>
-        <form type="hidden" id="user_form" method="post" action="/register/" enctype="multipart/form-data">
-            {% csrf_token %}
-            <input type="hidden" id="reg_name" name="username" value=""/>
-            <input type="hidden" id="reg_passw" name="password" value="" />
-            <input type="hidden" id="reg_email" name="email" value="" />
-        </form>
-
-        {% if user.is_authenticated %}
-            <span>Welcome {{ user.username }}! <a href="/logout/">Logout</a></span>
-        {% else %}
-            <span style="color:red">{{ instructions }}</span>
-            <input type="text" id="username" name="username" value="" Placeholder="username..">
-            <input type="password" id="password" name="password" value="" Placeholder="password..">
-            <input type="hidden" id="email" name="email" value="" Placeholder="email.." disabled="true">
-            <button class="button" onclick="javascript: login()">Login</button>
-            {% if registered %}
-                Registered!
-            {% else %}
-               <button class="button" onclick="javascript: register()">Register</button>
-        {% endif %}
-        {% endif %}
+<!--         {% if user.is_authenticated %} -->
+<!--             <span>Welcome {{ user.username }}! <a href="/logout/">Logout</a></span> -->
+<!--         {% else %} -->
+<!--             <span style="color:red">{{ instructions }}</span> -->
+<!--             <input type="text" id="username" name="username" value="" Placeholder="username.."> -->
+<!--             <input type="password" id="password" name="password" value="" Placeholder="password.."> -->
+<!--             <input type="hidden" id="email" name="email" value="" Placeholder="email.." disabled="true"> -->
+<!--             <button class="button" onclick="javascript: login()">Login</button> -->
+<!--             {% if registered %} -->
+<!--                 Registered! -->
+<!--             {% else %} -->
+<!--                <button class="button" onclick="javascript: register()">Register</button> -->
+<!--         {% endif %} -->
+<!--         {% endif %} -->
     </div>
     <!-- A wrapper for all the blog posts -->
         {% block general_content %}

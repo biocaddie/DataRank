@@ -16,7 +16,7 @@ class Dataset(models.Model):
         return self.ID
 
 class SearchForm(forms.Form):
-    search_words = forms.CharField(max_length=100)
+    search_words = forms.CharField(max_length=200)
 
 class RankForm(forms.Form):
     rank_info = forms.CharField(widget=forms.Textarea)

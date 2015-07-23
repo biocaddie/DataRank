@@ -257,7 +257,7 @@ if __name__ == '__main__':
 #     gse_paper_stats()
 #     preprocess(OPCCTH=0)
 #     compute_imporance_ranking()
-    createDatarankWebCorpus(True)
+    createDatarankWebCorpus(False)
     print 'Done!'    
         
     

@@ -11,7 +11,7 @@ from django.contrib.auth.decorators import login_required
 from ipware.ip import get_ip
 
 import time
-PAGE_NUM = 25
+PAGE_NUM = 20
 
 # Create your views here.
 def results(request):

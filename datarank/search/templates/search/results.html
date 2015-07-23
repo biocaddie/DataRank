@@ -6,29 +6,41 @@
 {% endblock %}
 
 {% block search %}
-
-    <nav class="nav">
-    <ul class="nav-list">
-        <li class="nav-item">
-           <a class="pure-button" href="javascript: searchsubmit()">Search</a>
-        </li>
-        <li class="nav-item">
-           <a class="pure-button" href="javascript: refresh()">Re-Rank</a>
-        </li>
-    </ul>
-    </nav>
+<form id="searchbar" name="searchbar" class="pure-form" action="/search/" method="post">
+            {% csrf_token %}
+            {% if keyword %}
+                <input class = "pure-input-2-3" id="search_words" type="text" name="search_words" Placeholder={{keyword}} size="35">
+            {% else %}
+                <input class = "pure-input-2-3" id="search_words" type="text" name="search_words" Placeholder="keywords..." size="35">
+            {% endif %}
+            <button class="pure-button" href="javascript: searchsubmit()">Search</button>
+            <button class="pure-button" href="javascript: refresh()">Re-Rank</button> 
+        </form>
+        
+<!-- <a class="pure-button" href="javascript: searchsubmit()">Search</a> -->
+<!--     <nav class="nav"> -->
+<!--     <ul class="nav-list"> -->
+<!--         <li class="nav-item"> -->
+<!--            <a class="pure-button" href="javascript: searchsubmit()">Search</a> -->
+<!--         </li> -->
+<!--         <li class="nav-item"> -->
+<!--            <a class="pure-button" href="javascript: refresh()">Re-Rank</a> -->
+<!--         </li> -->
+<!--     </ul> -->
+<!--     </nav> -->
 
 {% endblock %}
 
 
 {% block sth_cool %}
-<h1 class="content-subhead">Query:{{keyword}}</h1>
 
 
-<div class="pure-g">
-    <h3 class="pure-u-1-3">Search Results</h3>
-    <h3 class="pure-u-1-3">Dataset Summary </h3>
-</div>
+
+
+<!-- <div class="content-subhead pure-g"> -->
+<!--     <h3 class="pure-u-1-3">Query:{{keyword}}</h3> -->
+    
+<!-- </div> -->
 
 {% endblock %}
 
@@ -49,7 +61,7 @@
                 [{{forloop.counter}}] <a href="{{li.Url}}" target="_blank">{{ li.Title }}</a>
             </p>
             </div>
-        <div class="pure-u-1-3">
+        <div class="pure-u-1-6">
             <div>
             <form id="f{{ forloop.counter }}" class="pure-form" action="" method="post">
                 <input type="hidden" name="dname" value="{{ li.ID }}"/>
@@ -149,15 +161,15 @@
             </div>
             </br>
     </div>
-    <div class="pure-u-1-3">
-        <p align="left" > 
+    <div class="pure-u-1-2", display: inline-block>
+        <p align="justify" > 
            {{ li.Summary }}
         </p>
     </div>
     <div class="pure-u-1-3">
     {% load staticfiles %}
-    <a href="{% static "Wordcloud/GSE19.high.png" %}" target="_blank">
-  <img src="{% static "Wordcloud/GSE19.low.png" %}"/>
+    <a href="{% static "wordcloud/GSE99.high.png" %}" target="_blank">
+  <img src="{% static "wordcloud/GSE99.low.png" %}"/>
 </a>
     </div>
         {% endfor %}
