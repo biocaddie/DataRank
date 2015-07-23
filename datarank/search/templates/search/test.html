@@ -1,0 +1,52 @@
+{% extends "mybase.html" %}
+
+{% block head %}
+    {% load search_extra %}
+
+{% endblock %}
+
+{% block search %}
+
+    <nav class="nav">
+    <ul class="nav-list">
+        <li class="nav-item">
+           <a class="pure-button" href="javascript: searchsubmit()">Search</a>
+        </li>
+        <li class="nav-item">
+           <a class="pure-button" href="javascript: refresh()">Refresh</a>
+        </li>
+    </ul>
+    </nav>
+
+{% endblock %}
+
+{% block sth_cool %}
+<h1 class="content-subhead">Something Cool</h1>
+<p>
+    <label style="background-color:grey; color:white;">
+        Current Keywords
+    </label>
+    : {{keyword}}
+</p>
+
+<p>
+    <label style="background-color:grey; color:white;">
+        Features Importance 
+    </label> 
+    : to be added.
+</p>
+{% endblock %}
+
+{% block content %}
+    <h1 class="content-subhead">Search Results</h1>
+
+{% endblock %}
+
+
+{% block cheatsheet %}
+<h1 class="content-subhead">Cheatsheet</h1>
+<p>
+    For ratings, 5 stands for most favorate, 1 stands for most dislike.
+</p>
+{% endblock %}
+
