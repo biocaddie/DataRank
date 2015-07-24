@@ -42,7 +42,7 @@ def normMultiply(jaccs, counts, datasets):
     lists = zip(*[n_results, datasets, n_jaccs, jaccs])
     return lists
 
-def generalRanking(keywords):
+def jaccardRanking(keywords):
     print >>sys.stderr, "keywords: "+str(keywords)
 
     datasets = Dataset.objects.all()[:100]
@@ -88,7 +88,7 @@ def fillRatings(dataset, sample_argument):
         result = 1e-200
     return result
 
-def testRanking(offline_log_value, all_datasets, raw_user_ratings):
+def preferenceRanking(offline_log_value, all_datasets, raw_user_ratings):
     exponentialized_offline_value = [getExp(r) for r in offline_log_value]
     raw_user_ratings = ast.literal_eval(raw_user_ratings)
     

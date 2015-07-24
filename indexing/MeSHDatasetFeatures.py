@@ -74,11 +74,11 @@ def word_cloud(row):
     plt.imshow(wordcloud)
     plt.axis("off")
     plt.savefig(path+row.accession+'.low.png',format='png', dpi=50)
-    wordcloud = WordCloud(background_color="white",max_words=200,width=1000,height=1000).generate(' '.join( row.mesh))
-    plt.ioff()
-    plt.imshow(wordcloud)
-    plt.axis("off")
-    plt.savefig(path+row.accession+'.high.png',format='png', dpi=400)
+#     wordcloud = WordCloud(background_color="white",max_words=200,width=1000,height=1000).generate(' '.join( row.mesh))
+#     plt.ioff()
+#     plt.imshow(wordcloud)
+#     plt.axis("off")
+#     plt.savefig(path+row.accession+'.high.png',format='png', dpi=400)
 
 
 def createDatarankWebCorpus(wordcloud=False):
@@ -104,9 +104,10 @@ def createDatarankWebCorpus(wordcloud=False):
     A=dppm.accession.unique()
     dm=pd.DataFrame([(a,[m  for v in G.get_group(a).mesh.values for m in v]) for a in A], columns=['accession','mesh'])
     if wordcloud:
-        from multiprocessing import Pool
-        pool=Pool(20)
-        pool.map(word_cloud ,dm.iterrows())
+        map(word_cloud ,dm.iterrows())
+#         from multiprocessing import Pool
+#         pool=Pool(10)
+#         pool.map(word_cloud ,dm.iterrows())
     d=pd.merge(dm,d,on='accession')
     d=pd.merge(d, count, on='accession')
     d.to_pickle(path+'D.Web.df')
@@ -212,12 +213,12 @@ def preprocess(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5, OPCCTH=0):
     
     
     G=PPM.groupby('cites_pmid')
-    BM25=pd.DataFrame( map(lambda p: (p, G.get_group(p).mid.unique().tolist())  , CP), columns=['pmid','mid'])
-    BM25=pd.merge(DPP,BM25,left_on='cites_pmid',right_on='pmid')
-    G=BM25.groupby('accession')
-    A=BM25.accession.unique()
-    BM25=pd.DataFrame([(a,[m  for v in G.get_group(a).mid.values for m in v]) for a in A], columns=['accession','mid'])
-    BM25.to_pickle(path+'Corpus.BM25.df')
+    jaccardRanking=pd.DataFrame( map(lambda p: (p, G.get_group(p).mid.unique().tolist())  , CP), columns=['pmid','mid'])
+    jaccardRanking=pd.merge(DPP,jaccardRanking,left_on='cites_pmid',right_on='pmid')
+    G=jaccardRanking.groupby('accession')
+    A=jaccardRanking.accession.unique()
+    jaccardRanking=pd.DataFrame([(a,[m  for v in G.get_group(a).mid.values for m in v]) for a in A], columns=['accession','mid'])
+    jaccardRanking.to_pickle(path+'Corpus.jaccardRanking.df')
     
     DPP.to_pickle(path+'DPP.df')
     PP.to_pickle(path+'PP.df')
@@ -257,7 +258,7 @@ if __name__ == '__main__':
 #     gse_paper_stats()
 #     preprocess(OPCCTH=0)
 #     compute_imporance_ranking()
-    createDatarankWebCorpus(False)
+    createDatarankWebCorpus(True)
     print 'Done!'    
         
     

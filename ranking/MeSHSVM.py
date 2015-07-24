@@ -11,7 +11,11 @@ from sklearn.datasets import load_svmlight_file
 import numpy as np
 from time import time
 import pandas as pd
-
+M=pd.read_pickle('/home/arya/PubMed/GEO/Datasets/M.df')
+DP=pd.read_pickle('/home/arya/PubMed/GEO/Datasets/DPP.df')[['accession','cited_pmid']].drop_duplicates()
+DP.index=DP.cited_pmid
+DP.drop(['cited_pmid'],axis=1,inplace=True)
+model=joblib.load('/home/arya/PubMed/GEO/Datasets/libsvm/model/Model.libsvm')
 from sklearn.preprocessing import  MultiLabelBinarizer 
 
 def correct_dataset(path):
@@ -80,7 +84,22 @@ def compute_ranking():
     sys.stderr=stderr_old
     sys.stdout=stdout_old
 
+def getMeSHFeature(q):
+    from scipy.sparse import csr_matrix
+    x= csr_matrix((1,27454))
+    for w in q.split():
+        try:
+            x[0,int(M.loc[w.strip().lower()].mid)-1]+=1
+        except:
+            pass
+    return x
+    
 
+def predict(q='dna dna dna asdf tp53 acari dna human humans'):
+    x=getMeSHFeature(q)
+    deci=model.decision_function(x)
+    rank=model.classes_[deci.argsort()[:,::-1]].astype(int).astype(str)
+    return DP.loc[rank[0]].accession.values
 
 if __name__ == '__main__':
     compute_ranking()
