@@ -74,14 +74,16 @@ def word_cloud(row):
     plt.imshow(wordcloud)
     plt.axis("off")
     plt.savefig(path+row.accession+'.low.png',format='png', dpi=50)
-#     wordcloud = WordCloud(background_color="white",max_words=200,width=1000,height=1000).generate(' '.join( row.mesh))
-#     plt.ioff()
-#     plt.imshow(wordcloud)
-#     plt.axis("off")
-#     plt.savefig(path+row.accession+'.high.png',format='png', dpi=400)
+    plt.clf()
+    wordcloud = WordCloud(background_color="white",max_words=200,width=1000,height=1000).generate(' '.join( row.mesh))
+    plt.ioff()
+    plt.imshow(wordcloud)
+    plt.axis("off")
+    plt.savefig(path+row.accession+'.high.png',format='png', dpi=400)
+    plt.clf()
 
 
-def createDatarankWebCorpus(wordcloud=False):
+def createDatarankWebCorpus(wordcloud=False,num_threads=15):
     path='/home/arya/PubMed/GEO/Datasets/'
     dpp=pd.read_pickle(path+'DPP.df')[['accession','pmid','cites_pmid']].drop_duplicates()
     dpp
@@ -104,10 +106,10 @@ def createDatarankWebCorpus(wordcloud=False):
     A=dppm.accession.unique()
     dm=pd.DataFrame([(a,[m  for v in G.get_group(a).mesh.values for m in v]) for a in A], columns=['accession','mesh'])
     if wordcloud:
-        map(word_cloud ,dm.iterrows())
-#         from multiprocessing import Pool
-#         pool=Pool(10)
-#         pool.map(word_cloud ,dm.iterrows())
+#         map(word_cloud ,dm.iterrows())
+        from multiprocessing import Pool
+        pool=Pool(num_threads)
+        pool.map(word_cloud ,dm.iterrows())
     d=pd.merge(dm,d,on='accession')
     d=pd.merge(d, count, on='accession')
     d.to_pickle(path+'D.Web.df')
@@ -213,12 +215,12 @@ def preprocess(path='/home/arya/PubMed/GEO/Datasets/',n_fold=5, OPCCTH=0):
     
     
     G=PPM.groupby('cites_pmid')
-    jaccardRanking=pd.DataFrame( map(lambda p: (p, G.get_group(p).mid.unique().tolist())  , CP), columns=['pmid','mid'])
-    jaccardRanking=pd.merge(DPP,jaccardRanking,left_on='cites_pmid',right_on='pmid')
-    G=jaccardRanking.groupby('accession')
-    A=jaccardRanking.accession.unique()
-    jaccardRanking=pd.DataFrame([(a,[m  for v in G.get_group(a).mid.values for m in v]) for a in A], columns=['accession','mid'])
-    jaccardRanking.to_pickle(path+'Corpus.jaccardRanking.df')
+    generalRanking=pd.DataFrame( map(lambda p: (p, G.get_group(p).mid.unique().tolist())  , CP), columns=['pmid','mid'])
+    generalRanking=pd.merge(DPP,generalRanking,left_on='cites_pmid',right_on='pmid')
+    G=generalRanking.groupby('accession')
+    A=generalRanking.accession.unique()
+    generalRanking=pd.DataFrame([(a,[m  for v in G.get_group(a).mid.values for m in v]) for a in A], columns=['accession','mid'])
+    generalRanking.to_pickle(path+'Corpus.generalRanking.df')
     
     DPP.to_pickle(path+'DPP.df')
     PP.to_pickle(path+'PP.df')

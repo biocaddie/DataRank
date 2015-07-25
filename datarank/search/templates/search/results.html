@@ -119,22 +119,22 @@
                                 <th>{{ li.ID }}</th>
                             </tr>
                             <tr>
-                                <th>#cites</th>
+                                <th>Importance</th>
                                 <th>{{ li.Count }}</th>
                             </tr>
                             <tr>
-                                <th>log_posterior</th>
+                                <th>Ranking Score</th>
                                 <th>{{pred|floatformat:3}}</th>
                             </tr>
                             {% if jacc %}
                             <tr>
-                                <th>log_likelihood</th>
+                                <th>logPRelevance</th>
                                 <th>{{jacc|floatformat:3}}</th>
                             </tr>
                             {% endif %}
                             {% if jraw %}
                             <tr>
-                                <th>raw_likelihood</th>
+                                <th>Relevance</th>
                                 <th>{{jraw|floatformat:3}}</th>
                             </tr>
                             {% endif %}
@@ -162,14 +162,16 @@
             </br>
     </div>
     <div class="pure-u-1-2", display: inline-block>
+    {% load staticfiles %}
         <p align="justify" > 
            {{ li.Summary }}
         </p>
     </div>
     <div class="pure-u-1-3">
     {% load staticfiles %}
-    <a href="{% static "wordcloud/GSE99.high.png" %}" target="_blank">
-  <img src="{% static "wordcloud/GSE99.low.png" %}"/>
+    <a href="{% static  "wordcloud/" %}{{li.ID}}.high.png" target="_blank">
+<!--   <img src="{% static "wordcloud/GSE99.low.png" %}"/> -->
+  <img src= "{% static  "wordcloud/" %}{{li.ID}}.low.png"  />
 </a>
     </div>
         {% endfor %}

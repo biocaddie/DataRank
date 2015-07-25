@@ -1,6 +1,50 @@
 import ast, itertools, sys, time, math
-from multiprocessing import Pool
-from search.models import *
+from search.models import Dataset
+import pandas as pd
+import numpy as np
+from sklearn.externals import joblib
+
+def saveOne(row):
+    d = Dataset()
+    d.ID = row.accession
+    d.Url = "http://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=" + row.accession
+    d.PMID= row.pmid
+    d.Summary= row.summary
+    d.Title= row.accession+': '+row.title
+    d.Features = ';'.join(row.mesh)
+    d.Count = row.cpcc
+    d.save()
+ 
+def saveAll():
+    d=pd.read_pickle('/home/arya/PubMed/GEO/Datasets/D.Web.df')
+    d.apply(saveOne,axis=1)
+ 
+ 
+ 
+datasets = Dataset.objects.all()
+dsID=map(lambda x: x.ID,datasets)
+if not len(datasets):
+    print >>sys.stderr, "Saving Datasets to Django Database... "
+    saveAll()
+    datasets = Dataset.objects.all()
+print >>sys.stderr, "Read #Datasets: "+str(len(datasets))
+
+print >>sys.stderr, "Reading SVM Model... "
+M=pd.read_pickle('/home/arya/PubMed/GEO/Datasets/M.df')
+M.index=map(str.lower,M.name.values)
+model=joblib.load('/home/arya/PubMed/GEO/Datasets/libsvm/model/Model.libsvm')
+DP=pd.read_pickle('/home/arya/PubMed/GEO/Datasets/DPP.df')[['accession','cited_pmid']].drop_duplicates()
+PMID=pd.DataFrame(data=model.classes_.astype(int).astype(str), columns=['cited_pmid'])
+PMID['deci_idx']=PMID.index
+DP['deci']=0
+DP=pd.merge(DP,PMID,on='cited_pmid')
+print >>sys.stderr, "Reading Done. "
+# deci=np.random.rand(DP.cited_pmid.unique().shape[0])
+
+
+
+
+
 
 RANKING_SIZE = 5000
 # general algorithm is used to reduce #samples
@@ -42,22 +86,41 @@ def normMultiply(jaccs, counts, datasets):
     lists = zip(*[n_results, datasets, n_jaccs, jaccs])
     return lists
 
-def jaccardRanking(keywords):
-    print >>sys.stderr, "keywords: "+str(keywords)
+def jaccardRelevance(keywords,datasets):
+    print >>sys.stderr, "Ranking via Jaccard. keywords: "+str(keywords)
+    return [getSimilarity(keywords, st.Features) for st in datasets]
 
-    datasets = Dataset.objects.all()[:100]
-    if not len(datasets):
-        from search.source.saveData import saveAll
-        print >>sys.stderr, "Saving Datasets to Django Database... "
-        saveAll()
-        datasets = Dataset.objects.all()
-        
-    print >>sys.stderr, "Read #Datasets: "+str(len(datasets))
+    
+ 
+def SVMRelevance(keywords, datasets):
+    print >>sys.stderr, "Ranking via SVM. keywords: "+str(keywords)
+    from scipy.sparse import csr_matrix
+    x= csr_matrix((1,27454))
+    for w in keywords.split():
+        try:
+            x[0,int(M.loc[w.strip().lower()].mid)-1]+=1
+        except:
+            pass
+    print >>sys.stderr,'Feature Vector Data:' , x.data, 'idx:',x.nonzero()[1]
+    deci=model.decision_function(x)[0]
+    DP.index=DP.cited_pmid
+    DP.deci.loc[PMID.cited_pmid]=deci[DP.loc[PMID.cited_pmid].deci_idx.values]
+    DP.index=DP.accession
+    MIN=min(DP.loc[dsID].deci.values)
+    if MIN <0:
+        return DP.loc[dsID].deci.values-MIN
+    else: 
+        return DP.loc[dsID].deci.values
 
+def generalRanking(keywords):
+    
     try:
-        jaccs = [getSimilarity(keywords, st.Features) for st in datasets]
-        counts = [st.Count for st in datasets]
-        lists = normMultiply(jaccs, counts, datasets)
+#         relevance = jaccardRelevance(keywords,datasets)
+        relevance = SVMRelevance(keywords,datasets)
+        print >> sys.stderr,relevance
+#         relevance = [1 for st in datasets]
+        importance = [np.log(st.Count) for st in datasets]
+        lists = normMultiply(relevance, importance, datasets)
     except ValueError:
         return None
     sort = sorted(lists, key=lambda x: (x[0], x[1].ID), reverse=True)
@@ -73,7 +136,7 @@ def getRating(datatuple, ratings):
 
 def fillRatings(dataset, sample_argument):
     samples, sample_rates = sample_argument
-    size = len(sample_rates)*1.
+#     size = len(sample_rates)*1.
     try:
         ind = samples.index(dataset)
         rate = sample_rates[ind]

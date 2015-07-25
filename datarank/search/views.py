@@ -5,7 +5,7 @@ from django.forms.formsets import formset_factory
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 import sys, ast, unicodedata
 from search.models import *
-from search.Ranking import jaccardRanking, preferenceRanking
+from search.Ranking import generalRanking, preferenceRanking
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from ipware.ip import get_ip
@@ -62,7 +62,7 @@ def refresh(request):
 
     if 'keywords' in request.session:
         print >>sys.stderr, 'keywords Processing Part'
-        base_tuples = jaccardRanking(request.session['keywords'])
+        base_tuples = generalRanking(request.session['keywords'])
         if base_tuples is None:
             return HttpResponseRedirect(reverse('ds:index'))
         rs, base, glist, jraw = zip(*base_tuples)
@@ -130,7 +130,7 @@ def search(request):
             request.session['created'] = time.strftime("%d,%m,%Y,%H,%M,%S")
 
     if 'keywords' in request.session:
-        base_tuples = jaccardRanking(request.session['keywords'])
+        base_tuples = generalRanking(request.session['keywords'])
         if base_tuples is None:
             return HttpResponseRedirect(reverse('ds:index'))
         rs, lists, glist, graw = zip(*base_tuples)
