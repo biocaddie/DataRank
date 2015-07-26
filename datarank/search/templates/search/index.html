@@ -18,25 +18,14 @@
 {% block general_content %}
 <h1 class="content-subhead">Welcome!</h1>
 <p> 
-    Input keywords and click 'search' button. You could get initial results. 
-    </br>
+    Input keywords (MeSH terms separated by semicolon) and click 'search' button. You could get initial results. 
     After that, rates datasets and clicks re-rank, an optimized result would be given. 
 </p>
-<p>
-    <i>search</i> is used to start a new session. 
-</p>
-<p>
-    <i>re-rank</i> is used to reorder based on user ratings.
-</p>
-<label style="background-color:orange; color:white; text-align:center">
-Search on specific database repository only. Use grammar: keywords@db_name
-</label>
-<ul>
-    <li> GSE </li>
-    <li> GeneBank </li>
-</ul>
+
 <label style="background-color:green; color:white; text-align:center">
-Some feature names you may want to use.
+Note that keywords should be MeSH terms and should be separated by semicolon.</label>
+<label style="font-weight:bold; text-align:center">
+Here is a link for <a href="http://www.ncbi.nlm.nih.gov/mesh/" target="_blank">MeSH search</a>. For example, a MeSH term can be 
 </label>
 <ul>
     <li>DNA</li>
@@ -51,15 +40,15 @@ Some feature names you may want to use.
     <li>Sea Urchins</li>
     <li>Charadriiformes</li>
 </ul>
+
 <label style="font-weight:bold; text-align:center">
-Here is a link for <a href="http://www.ncbi.nlm.nih.gov/mesh/" target="_blank">MeSH search</a>.
+Here is a link for <a href="http://www.ncbi.nlm.nih.gov/mesh/" target="_blank">MeSH search</a>. For example, a MeSH term can be 
 </label>
-<p>
-    use any combinations of these features by joining them with semicolon mark (;).
-</p>
-<p>
-    e.g. DNA;Phylogeny;RNA, Untranslated;Tobacco Mosaic Virus <b>or</b> DNA;Genes@GeneBank
-</p>
+<ul>
+    <li>DNA;Phylogeny;RNA, Untranslated;Tobacco Mosaic Virus</li>
+    <li>Ovarian Neoplasms;Gene Expression Profiling; Survival Analysis </li>
+    <li>Animals;Sea Urchins</li>
+</ul>
 {% endblock %}
 
 {% block footer %}

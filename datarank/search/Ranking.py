@@ -81,6 +81,8 @@ def normMultiply(jaccs, counts, datasets):
     n_jaccs = normList(jaccs, func=getLog)
     n_counts = normList(counts, func=getLog)
     results = [j+c for j, c in zip(*[n_jaccs, n_counts])]
+    print >> sys.stderr, n_jaccs
+    print >> sys.stderr, results
     n_results_temp = normOnLog(results, func=getExp)
     n_results = normList(n_results_temp, getLog)
     lists = zip(*[n_results, datasets, n_jaccs, jaccs])
@@ -96,7 +98,7 @@ def SVMRelevance(keywords, datasets):
     print >>sys.stderr, "Ranking via SVM. keywords: "+str(keywords)
     from scipy.sparse import csr_matrix
     x= csr_matrix((1,27454))
-    for w in keywords.split():
+    for w in keywords.split(';'):
         try:
             x[0,int(M.loc[w.strip().lower()].mid)-1]+=1
         except:
@@ -117,7 +119,7 @@ def generalRanking(keywords):
     try:
 #         relevance = jaccardRelevance(keywords,datasets)
         relevance = SVMRelevance(keywords,datasets)
-        print >> sys.stderr,relevance
+#         print >> sys.stderr,relevance
 #         relevance = [1 for st in datasets]
         importance = [np.log(st.Count) for st in datasets]
         lists = normMultiply(relevance, importance, datasets)
