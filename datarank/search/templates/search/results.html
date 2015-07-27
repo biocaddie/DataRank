@@ -123,12 +123,12 @@
                                 <th>{{ li.Count }}</th>
                             </tr>
                             <tr>
-                                <th>Ranking Score</th>
+                                <th>logProb(Ranking Score)</th>
                                 <th>{{pred|floatformat:3}}</th>
                             </tr>
                             {% if jacc %}
                             <tr>
-                                <th>logPRelevance</th>
+                                <th>logProb(Relevance)</th>
                                 <th>{{jacc|floatformat:3}}</th>
                             </tr>
                             {% endif %}

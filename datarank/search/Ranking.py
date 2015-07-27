@@ -53,7 +53,7 @@ def normList(alist_raw, func=lambda x: x, func2=lambda x: x):
     SUM = 1.*sum(alist)
     try:
         return [func(a/SUM) for a in alist]
-    except ZeroDivisionError:
+    except :
         return [0. for a in alist]
 def normOnLog(alist, func = lambda x: x):
     m = max(alist)
@@ -78,11 +78,11 @@ def getSimilarity(dataset1, dataset2):
     return getJaccard(x, y)
 
 def normMultiply(jaccs, counts, datasets):
+    pd.DataFrame(counts).to_pickle('/home/arya/c.df')
+    pd.DataFrame(jaccs).to_pickle('/home/arya/j.df')
     n_jaccs = normList(jaccs, func=getLog)
     n_counts = normList(counts, func=getLog)
     results = [j+c for j, c in zip(*[n_jaccs, n_counts])]
-    print >> sys.stderr, n_jaccs
-    print >> sys.stderr, results
     n_results_temp = normOnLog(results, func=getExp)
     n_results = normList(n_results_temp, getLog)
     lists = zip(*[n_results, datasets, n_jaccs, jaccs])
@@ -121,7 +121,7 @@ def generalRanking(keywords):
         relevance = SVMRelevance(keywords,datasets)
 #         print >> sys.stderr,relevance
 #         relevance = [1 for st in datasets]
-        importance = [np.log(st.Count) for st in datasets]
+        importance = [np.log(st.Count+1)/10.0 for st in datasets]
         lists = normMultiply(relevance, importance, datasets)
     except ValueError:
         return None
