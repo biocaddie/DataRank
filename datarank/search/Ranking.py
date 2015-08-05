@@ -115,12 +115,9 @@ def SVMRelevance(keywords, datasets):
         return DP.loc[dsID].deci.values
 
 def generalRanking(keywords):
-    
     try:
 #         relevance = jaccardRelevance(keywords,datasets)
         relevance = SVMRelevance(keywords,datasets)
-#         print >> sys.stderr,relevance
-#         relevance = [1 for st in datasets]
         importance = [np.log(st.Count+1)/10.0 for st in datasets]
         lists = normMultiply(relevance, importance, datasets)
     except ValueError:
