@@ -3,7 +3,7 @@ from search.models import Dataset
 import pandas as pd
 import numpy as np
 from sklearn.externals import joblib
-
+sys.stderr = open('/home/arya/datarank.log','w')
 def saveOne(row):
     d = Dataset()
     d.ID = row.accession
